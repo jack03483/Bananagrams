@@ -79,8 +79,8 @@ body {
 
 #board {
   display: grid;
-  grid-template-columns: repeat(21, 42px);
-  grid-template-rows: repeat(21, 42px);
+  grid-template-columns: repeat(31, 38px);
+  grid-template-rows: repeat(31, 38px);
   gap: 1px;
   background: var(--board-bg);
   border: 2px solid #2a3a5a;
@@ -89,8 +89,8 @@ body {
 }
 
 .cell {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   background: var(--cell-bg);
   border: 1px solid var(--cell-border);
   display: flex;

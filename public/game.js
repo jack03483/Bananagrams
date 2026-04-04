@@ -2,7 +2,7 @@
 // Bananagrams — Game Logic
 // ============================================================
 
-const BOARD_SIZE = 21;
+const BOARD_SIZE = 31;
 const STARTING_TILES = 15;
 
 // Bananagrams letter distribution (144 tiles)
@@ -73,14 +73,10 @@ function shuffle(arr) {
 
 async function loadDictionary() {
   try {
-    const res = await fetch('/api/dictionary');
-    const data = await res.json();
-    document.getElementById('word-count-label').textContent = `${data.wordCount.toLocaleString()} words in dictionary`;
-
-    // Load full dictionary for client-side word finding
-    const dictRes = await fetch('/data/dictionary.json');
-    dictionary = await dictRes.json();
-
+    const res = await fetch('dictionary.json');
+    dictionary = await res.json();
+    const count = Object.keys(dictionary).length;
+    document.getElementById('word-count-label').textContent = `${count.toLocaleString()} words in dictionary`;
     updateWordSuggestions();
   } catch (err) {
     document.getElementById('word-count-label').textContent = 'Error loading dictionary';
@@ -438,6 +434,8 @@ function checkConnectivity(tiles) {
 // PEEL — add a new tile
 // ============================================================
 
+const PEEL_COUNT = 15;
+
 function doPeel() {
   if (pool.length === 0) {
     document.getElementById('status-msg').textContent = 'You win! No tiles left!';
@@ -445,24 +443,25 @@ function doPeel() {
     return;
   }
 
-  drawTiles(1);
+  const count = Math.min(PEEL_COUNT, pool.length);
+  drawTiles(count);
   updateCounts();
 
   // Flash animation
   document.getElementById('app').classList.add('peel-flash');
   setTimeout(() => document.getElementById('app').classList.remove('peel-flash'), 800);
 
-  document.getElementById('status-msg').textContent = 'PEEL! +1 tile';
+  document.getElementById('status-msg').textContent = `PEEL! +${count} tiles`;
   document.getElementById('status-msg').style.color = 'var(--accent)';
   setTimeout(() => {
     document.getElementById('status-msg').textContent = '';
   }, 1500);
 
   renderRack();
-  // Add pop-in animation to newest tile
+  // Add pop-in animation to new tiles
   const rackTiles = document.querySelectorAll('.rack-tile');
-  if (rackTiles.length > 0) {
-    rackTiles[rackTiles.length - 1].classList.add('tile-new');
+  for (let i = Math.max(0, rackTiles.length - count); i < rackTiles.length; i++) {
+    rackTiles[i].classList.add('tile-new');
   }
 
   scheduleWordSuggestions();
