@@ -501,11 +501,25 @@ function countBoardTiles() {
 
 function showVictoryScreen() {
   fireConfetti(8000);
-  document.getElementById('victory-screen').classList.remove('hidden');
+  const victoryScreen = document.getElementById('victory-screen');
+  victoryScreen.classList.remove('hidden');
+
+  // After 3 seconds, fade out victory and reveal boss image
+  setTimeout(() => {
+    victoryScreen.style.transition = 'opacity 1.5s ease';
+    victoryScreen.style.opacity = '0';
+
+    setTimeout(() => {
+      victoryScreen.classList.add('hidden');
+      victoryScreen.style.opacity = '';
+      victoryScreen.style.transition = '';
+      document.getElementById('boss-reveal').classList.remove('hidden');
+    }, 1500);
+  }, 3000);
 }
 
 document.getElementById('challenge-alun-btn').addEventListener('click', () => {
-  document.getElementById('victory-screen').classList.add('hidden');
+  document.getElementById('boss-reveal').classList.add('hidden');
   startBossBattle();
 });
 

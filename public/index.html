@@ -54,14 +54,26 @@
       <div class="peel-text">PEEL! +15</div>
     </div>
 
-    <!-- Victory screen -->
+    <!-- Victory screen — phase 1: VICTORY text + confetti -->
     <div id="victory-screen" class="overlay hidden">
       <div class="victory-content">
         <div class="victory-title">VICTORY!</div>
         <div class="victory-sub">You placed all 144 tiles!</div>
-        <div class="challenge-prompt">Do you want to play?</div>
-        <button id="challenge-alun-btn" class="boss-challenge-btn">Speed Round</button>
-        <button id="play-again-btn" class="play-again-btn-v">Play Again</button>
+      </div>
+    </div>
+
+    <!-- Victory screen — phase 2: boss image + CONTINUE? -->
+    <div id="boss-reveal" class="overlay hidden">
+      <div class="boss-reveal-bg">
+        <img src="boss.png" alt="" class="boss-reveal-img">
+        <div class="boss-reveal-overlay"></div>
+        <div class="boss-reveal-text">
+          <div class="continue-text">CONTINUE?</div>
+          <div class="continue-buttons">
+            <button id="challenge-alun-btn" class="continue-yes">YES</button>
+            <button id="play-again-btn" class="continue-no">NO</button>
+          </div>
+        </div>
       </div>
     </div>
 
