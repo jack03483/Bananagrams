@@ -20,6 +20,9 @@ let dictionary = null;
 let suggestionTimeout = null;
 let validationTimeout = null;
 let peelCooldown = false;
+let cursorRow = Math.floor(BOARD_SIZE / 2);
+let cursorCol = Math.floor(BOARD_SIZE / 2);
+let boardFocused = false;
 
 // ============================================================
 // Initialization
@@ -113,7 +116,15 @@ function renderBoard() {
         cell.textContent = board[r][c];
       }
 
-      cell.addEventListener('click', () => handleCellClick(r, c));
+      if (boardFocused && r === cursorRow && c === cursorCol) {
+        cell.classList.add('cursor');
+      }
+
+      cell.addEventListener('click', () => {
+        cursorRow = r; cursorCol = c;
+        boardFocused = true;
+        handleCellClick(r, c);
+      });
       cell.addEventListener('dragover', (e) => { e.preventDefault(); cell.classList.add('drag-over'); });
       cell.addEventListener('dragleave', () => { cell.classList.remove('drag-over'); });
       cell.addEventListener('drop', (e) => { e.preventDefault(); cell.classList.remove('drag-over'); handleDrop(r, c); });
@@ -757,6 +768,94 @@ function renderWordSuggestions(results) {
 
   container.innerHTML = html;
 }
+
+// ============================================================
+// Keyboard Navigation
+// ============================================================
+
+document.addEventListener('keydown', (e) => {
+  // Don't intercept if boss battle input is focused or an overlay is visible
+  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+  if (!document.getElementById('boss-battle').classList.contains('hidden')) return;
+  if (!document.getElementById('victory-screen').classList.contains('hidden')) return;
+
+  const key = e.key;
+
+  // Arrow keys — move cursor
+  if (key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight') {
+    e.preventDefault();
+    boardFocused = true;
+    if (key === 'ArrowUp') cursorRow = Math.max(0, cursorRow - 1);
+    if (key === 'ArrowDown') cursorRow = Math.min(BOARD_SIZE - 1, cursorRow + 1);
+    if (key === 'ArrowLeft') cursorCol = Math.max(0, cursorCol - 1);
+    if (key === 'ArrowRight') cursorCol = Math.min(BOARD_SIZE - 1, cursorCol + 1);
+    renderBoard();
+    // Scroll cursor into view
+    const idx = cursorRow * BOARD_SIZE + cursorCol;
+    const cells = document.querySelectorAll('.cell');
+    if (cells[idx]) cells[idx].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    return;
+  }
+
+  // Letter key — place tile from rack at cursor
+  if (/^[a-zA-Z]$/.test(key) && boardFocused) {
+    e.preventDefault();
+    const letter = key.toUpperCase();
+    const rackIdx = rack.indexOf(letter);
+    if (rackIdx === -1) return; // don't have that letter
+
+    if (board[cursorRow][cursorCol] === null) {
+      // Place letter
+      board[cursorRow][cursorCol] = letter;
+      rack.splice(rackIdx, 1);
+      // Auto-advance cursor right
+      if (cursorCol < BOARD_SIZE - 1) cursorCol++;
+      selectedTile = null;
+      renderBoard(); renderRack(); scheduleWordSuggestions();
+    } else if (board[cursorRow][cursorCol] !== letter) {
+      // Swap: pick up board tile, place typed letter
+      const existing = board[cursorRow][cursorCol];
+      board[cursorRow][cursorCol] = letter;
+      rack.splice(rackIdx, 1);
+      rack.push(existing);
+      if (cursorCol < BOARD_SIZE - 1) cursorCol++;
+      selectedTile = null;
+      renderBoard(); renderRack(); scheduleWordSuggestions();
+    }
+    return;
+  }
+
+  // Backspace / Delete — pick up tile at cursor back to rack
+  if ((key === 'Backspace' || key === 'Delete') && boardFocused) {
+    e.preventDefault();
+    if (board[cursorRow][cursorCol]) {
+      rack.push(board[cursorRow][cursorCol]);
+      board[cursorRow][cursorCol] = null;
+      if (key === 'Backspace' && cursorCol > 0) cursorCol--;
+      selectedTile = null;
+      renderBoard(); renderRack(); scheduleWordSuggestions();
+    } else if (key === 'Backspace' && cursorCol > 0) {
+      cursorCol--;
+      if (board[cursorRow][cursorCol]) {
+        rack.push(board[cursorRow][cursorCol]);
+        board[cursorRow][cursorCol] = null;
+        selectedTile = null;
+        renderBoard(); renderRack(); scheduleWordSuggestions();
+      } else {
+        renderBoard();
+      }
+    }
+    return;
+  }
+
+  // Escape — deselect / unfocus board
+  if (key === 'Escape') {
+    boardFocused = false;
+    selectedTile = null;
+    renderBoard();
+    return;
+  }
+});
 
 // ============================================================
 // Start
