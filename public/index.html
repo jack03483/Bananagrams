@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bananagrams</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Top Bar -->
+    <header id="top-bar">
+      <h1>🍌 Bananagrams</h1>
+      <div id="game-info">
+        <span id="tile-count">Tiles: 15</span>
+        <span id="pool-count">Pool: 129</span>
+        <span id="status-msg"></span>
+      </div>
+    </header>
+
+    <div id="main-layout">
+      <!-- Game Area -->
+      <div id="game-area">
+        <!-- Board -->
+        <div id="board-container">
+          <div id="board"></div>
+        </div>
+
+        <!-- Tile Rack -->
+        <div id="rack-area">
+          <div id="rack-label">Your Tiles <span id="rack-count"></span></div>
+          <div id="rack"></div>
+        </div>
+      </div>
+
+      <!-- Right Sidebar — Word Suggestions -->
+      <div id="sidebar">
+        <div id="sidebar-header">
+          <h2>Possible Words</h2>
+          <div id="word-count-label">Loading...</div>
+        </div>
+        <div id="word-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
