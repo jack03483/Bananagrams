@@ -494,13 +494,8 @@ function scheduleWordSuggestions() {
 function updateWordSuggestions() {
   if (!dictionary) return;
 
-  // Collect ALL letters (rack + board)
+  // Only use loose letters (rack tiles not yet placed on the board)
   const allLetters = [...rack];
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      if (board[r][c]) allLetters.push(board[r][c]);
-    }
-  }
 
   if (allLetters.length === 0) {
     document.getElementById('word-list').innerHTML = '<div style="padding:1rem;color:var(--text-muted)">No tiles yet</div>';
