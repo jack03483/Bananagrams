@@ -514,7 +514,7 @@ document.getElementById('play-again-btn').addEventListener('click', () => {
 });
 
 // ============================================================
-// ALUN Boss Battle — Speed Round
+// Boss Battle — Speed Round
 // ============================================================
 
 let bossLetters = [];
@@ -558,7 +558,7 @@ function startBossBattle() {
       clearInterval(bossTimer);
       // Time's up — check who won
       if (alunHp <= 0) bossVictory();
-      else bossDefeat('Time ran out! Alun survives with ' + alunHp + ' HP.');
+      else bossDefeat('Time ran out! Boss survives with ' + alunHp + ' HP.');
     }
   }, 1000);
 }
@@ -624,11 +624,11 @@ function bossSubmitWord() {
   const fb = document.getElementById('boss-feedback');
 
   if (isValidWord(word) && canMakeFromBossLetters(word)) {
-    // CORRECT — remove letters, damage Alun
+    // CORRECT — remove letters, damage the Boss
     removeBossLetters(word);
     alunHp = Math.max(0, alunHp - word.length);
     bossUsedWords.push({ word, valid: true });
-    showBossFeedback(`${word} — ${word.length} damage to Alun!`, true);
+    showBossFeedback(`${word} — ${word.length} damage to Boss!`, true);
   } else if (!isValidWord(word)) {
     // INCORRECT — damage player, keep letters
     playerBossHp = Math.max(0, playerBossHp - word.length);
@@ -648,7 +648,7 @@ function bossSubmitWord() {
     setTimeout(() => bossVictory(), 500);
   } else if (playerBossHp <= 0) {
     clearInterval(bossTimer);
-    setTimeout(() => bossDefeat('Alun overwhelmed you with his dark power!'), 500);
+    setTimeout(() => bossDefeat('Too many bad words! The boss wins this round.'), 500);
   }
 }
 
@@ -722,9 +722,9 @@ function bossVictory() {
   fireConfetti(10000);
 
   const msgs = [
-    'The word demon ALUN shatters into a thousand letters, scattered by the hurricane of your vocabulary! You stand among the ruins of his lexicon, UNDEFEATED!',
-    'ALUN howls as your final word pierces his dark heart! "IMPOSSIBLE!" he screams, dissolving into alphabet soup. You are the SUPREME WORDSMITH!',
-    'With devastating linguistic precision, you reduce ALUN to nothing but silent consonants! The beast is VANQUISHED! Your vocabulary knows NO BOUNDS!'
+    'Every letter bent to your will. Every word a weapon. You are the SUPREME WORDSMITH!',
+    '50 letters. 5 minutes. Zero mercy. You crushed it.',
+    'The dictionary fears you. Absolute domination.'
   ];
   document.getElementById('boss-victory-msg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
 }
@@ -735,9 +735,9 @@ function bossDefeat(reason) {
   document.getElementById('boss-defeat').classList.remove('hidden');
 
   const msgs = [
-    `${reason} ALUN looms over you, flames crackling. "Your words are WEAK, mortal. Study harder and return!" But you feel it in your bones — next time, you WILL prevail.`,
-    `${reason} The word demon cackles as darkness closes in. "So close, yet so far from mastery!" But defeat only sharpens a true wordsmith's hunger.`,
-    `${reason} ALUN grins with jagged teeth. "A valiant effort... for a beginner." He vanishes in smoke, but leaves behind a whisper: "I'll be waiting."`
+    `${reason} Not this time. But the letters are still there. Go again.`,
+    `${reason} Close, but not close enough. You know more words than you think.`,
+    `${reason} Shake it off. The speed round doesn't forgive, but you can.`
   ];
   document.getElementById('boss-defeat-msg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
 }
@@ -899,7 +899,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-// DEV: Skip to Alun (remove before git push)
+// DEV: Skip to boss (remove before git push)
 // ============================================================
 
 document.getElementById('dev-skip-btn').addEventListener('click', () => {

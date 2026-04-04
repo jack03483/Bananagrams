@@ -59,13 +59,13 @@
       <div class="victory-content">
         <div class="victory-title">VICTORY!</div>
         <div class="victory-sub">You placed all 144 tiles!</div>
-        <div class="victory-monster"><img src="alun.svg" alt="Alun" class="alun-img"></div>
-        <button id="challenge-alun-btn" class="boss-challenge-btn">Challenge Alun?</button>
+        <div class="challenge-prompt">Do you want to play?</div>
+        <button id="challenge-alun-btn" class="boss-challenge-btn">Speed Round</button>
         <button id="play-again-btn" class="play-again-btn-v">Play Again</button>
       </div>
     </div>
 
-    <!-- Alun Boss Battle -->
+    <!-- Boss Battle — Speed Round -->
     <div id="boss-battle" class="overlay hidden">
       <div class="boss-battle-content">
         <div class="boss-header">
@@ -75,7 +75,7 @@
         </div>
         <div class="boss-hud">
           <div class="boss-combatant">
-            <div class="boss-name-alun">🔥 ALUN 🔥</div>
+            <div class="boss-name-enemy">Boss</div>
             <div class="boss-hp-bar"><div id="alun-hp-fill" class="boss-hp-fill alun-hp"></div></div>
             <div id="alun-hp-text" class="boss-hp-text">50 / 50 HP</div>
           </div>
@@ -86,7 +86,6 @@
             <div id="player-hp-text-boss" class="boss-hp-text">50 / 50 HP</div>
           </div>
         </div>
-        <div class="boss-monster-display"><img src="alun.svg" alt="Alun" class="alun-img-battle"></div>
         <div id="boss-feedback" class="boss-feedback"></div>
         <div class="boss-letters-area">
           <div class="boss-letters-label">Your Letters (<span id="boss-letter-count">50</span>):</div>
@@ -105,7 +104,7 @@
     <!-- Boss Victory -->
     <div id="boss-victory" class="overlay hidden">
       <div class="victory-content boss-win">
-        <div class="victory-title">ALUN DEFEATED!</div>
+        <div class="victory-title">YOU WIN!</div>
         <div id="boss-victory-msg" class="victory-sub"></div>
         <button onclick="location.reload()" class="play-again-btn-v">Play Again</button>
       </div>
@@ -114,7 +113,7 @@
     <!-- Boss Defeat -->
     <div id="boss-defeat" class="overlay hidden">
       <div class="victory-content boss-lose">
-        <div class="defeat-title">DEFEATED...</div>
+        <div class="defeat-title">GAME OVER</div>
         <div id="boss-defeat-msg" class="victory-sub"></div>
         <button onclick="location.reload()" class="play-again-btn-v">Try Again</button>
       </div>
