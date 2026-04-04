@@ -12,14 +12,14 @@ const LETTER_DIST = {
 };
 
 // State
-let pool = [];         // undrawn tiles
-let rack = [];         // tiles in hand
-let board = [];        // 2D array, null or letter
-let selectedTile = null;   // { source: 'rack'|'board', index|row,col, letter }
-let dictionary = null;     // loaded from server
-let wordSuggestions = [];
+let pool = [];
+let rack = [];
+let board = [];
+let selectedTile = null;
+let dictionary = null;
 let suggestionTimeout = null;
 let validationTimeout = null;
+let peelCooldown = false;
 
 // ============================================================
 // Initialization
@@ -113,24 +113,11 @@ function renderBoard() {
         cell.textContent = board[r][c];
       }
 
-      // Click to place/pick up
       cell.addEventListener('click', () => handleCellClick(r, c));
+      cell.addEventListener('dragover', (e) => { e.preventDefault(); cell.classList.add('drag-over'); });
+      cell.addEventListener('dragleave', () => { cell.classList.remove('drag-over'); });
+      cell.addEventListener('drop', (e) => { e.preventDefault(); cell.classList.remove('drag-over'); handleDrop(r, c); });
 
-      // Drag and drop
-      cell.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        cell.classList.add('drag-over');
-      });
-      cell.addEventListener('dragleave', () => {
-        cell.classList.remove('drag-over');
-      });
-      cell.addEventListener('drop', (e) => {
-        e.preventDefault();
-        cell.classList.remove('drag-over');
-        handleDrop(r, c);
-      });
-
-      // Dragging from board
       if (board[r][c]) {
         cell.draggable = true;
         cell.addEventListener('dragstart', (e) => {
@@ -138,9 +125,7 @@ function renderBoard() {
           e.dataTransfer.setData('text/plain', board[r][c]);
           setTimeout(() => cell.style.opacity = '0.4', 0);
         });
-        cell.addEventListener('dragend', () => {
-          cell.style.opacity = '1';
-        });
+        cell.addEventListener('dragend', () => { cell.style.opacity = '1'; });
       }
 
       boardEl.appendChild(cell);
@@ -164,7 +149,6 @@ function renderRack() {
       tile.classList.add('selected');
     }
 
-    // Click to select
     tile.addEventListener('click', () => {
       if (selectedTile && selectedTile.source === 'rack' && selectedTile.index === i) {
         selectedTile = null;
@@ -174,22 +158,18 @@ function renderRack() {
       renderRack();
     });
 
-    // Drag
     tile.addEventListener('dragstart', (e) => {
       selectedTile = { source: 'rack', index: i, letter };
       e.dataTransfer.setData('text/plain', letter);
       tile.classList.add('dragging');
     });
-    tile.addEventListener('dragend', () => {
-      tile.classList.remove('dragging');
-    });
+    tile.addEventListener('dragend', () => { tile.classList.remove('dragging'); });
 
     rackEl.appendChild(tile);
   });
 
   document.getElementById('rack-count').textContent = `(${rack.length})`;
 
-  // Allow dropping back to rack
   rackEl.addEventListener('dragover', (e) => e.preventDefault());
   rackEl.addEventListener('drop', (e) => {
     e.preventDefault();
@@ -212,71 +192,44 @@ function renderRack() {
 function handleCellClick(r, c) {
   if (selectedTile) {
     if (board[r][c] === null) {
-      // Place the selected tile
       board[r][c] = selectedTile.letter;
-
-      if (selectedTile.source === 'rack') {
-        rack.splice(selectedTile.index, 1);
-      } else if (selectedTile.source === 'board') {
-        board[selectedTile.row][selectedTile.col] = null;
-      }
-
+      if (selectedTile.source === 'rack') rack.splice(selectedTile.index, 1);
+      else if (selectedTile.source === 'board') board[selectedTile.row][selectedTile.col] = null;
       selectedTile = null;
-      renderBoard();
-      renderRack();
-      scheduleWordSuggestions();
+      renderBoard(); renderRack(); scheduleWordSuggestions();
     } else if (selectedTile.source === 'board' && r === selectedTile.row && c === selectedTile.col) {
-      // Deselect
-      selectedTile = null;
-      renderBoard();
+      selectedTile = null; renderBoard();
     } else {
-      // Swap tiles
       if (selectedTile.source === 'board') {
-        const tempLetter = board[r][c];
+        const temp = board[r][c];
         board[r][c] = selectedTile.letter;
-        board[selectedTile.row][selectedTile.col] = tempLetter;
+        board[selectedTile.row][selectedTile.col] = temp;
       } else if (selectedTile.source === 'rack') {
-        // Pick up board tile, place rack tile
         const boardLetter = board[r][c];
         board[r][c] = selectedTile.letter;
         rack.splice(selectedTile.index, 1);
         rack.push(boardLetter);
       }
       selectedTile = null;
-      renderBoard();
-      renderRack();
-      scheduleWordSuggestions();
+      renderBoard(); renderRack(); scheduleWordSuggestions();
     }
   } else {
     if (board[r][c]) {
-      // Select this board tile
       selectedTile = { source: 'board', row: r, col: c, letter: board[r][c] };
       renderBoard();
-      // Highlight selected cell
       const cells = document.querySelectorAll('.cell');
-      const idx = r * BOARD_SIZE + c;
-      cells[idx].classList.add('selected');
+      cells[r * BOARD_SIZE + c].classList.add('selected');
     }
   }
 }
 
 function handleDrop(r, c) {
-  if (!selectedTile) return;
-
-  if (board[r][c] === null) {
-    board[r][c] = selectedTile.letter;
-
-    if (selectedTile.source === 'rack') {
-      rack.splice(selectedTile.index, 1);
-    } else if (selectedTile.source === 'board') {
-      board[selectedTile.row][selectedTile.col] = null;
-    }
-
-    selectedTile = null;
-    renderBoard();
-    renderRack();
-    scheduleWordSuggestions();
-  }
+  if (!selectedTile || board[r][c] !== null) return;
+  board[r][c] = selectedTile.letter;
+  if (selectedTile.source === 'rack') rack.splice(selectedTile.index, 1);
+  else if (selectedTile.source === 'board') board[selectedTile.row][selectedTile.col] = null;
+  selectedTile = null;
+  renderBoard(); renderRack(); scheduleWordSuggestions();
 }
 
 // ============================================================
@@ -291,8 +244,6 @@ function scheduleValidation() {
 function validateBoard() {
   const words = findBoardWords();
   const cells = document.querySelectorAll('.cell');
-
-  // Reset highlights
   cells.forEach(c => c.classList.remove('valid-word', 'invalid-word'));
 
   let allValid = true;
@@ -302,45 +253,30 @@ function validateBoard() {
     hasWords = true;
     const valid = isValidWord(w.word);
     if (!valid) allValid = false;
-
     for (const pos of w.cells) {
-      const idx = pos.row * BOARD_SIZE + pos.col;
-      cells[idx].classList.add(valid ? 'valid-word' : 'invalid-word');
+      cells[pos.row * BOARD_SIZE + pos.col].classList.add(valid ? 'valid-word' : 'invalid-word');
     }
   }
 
-  // Check for floating tiles (single letters not part of any word)
   const tilesOnBoard = [];
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
+  for (let r = 0; r < BOARD_SIZE; r++)
+    for (let c = 0; c < BOARD_SIZE; c++)
       if (board[r][c]) tilesOnBoard.push({ r, c });
-    }
-  }
 
   const connected = tilesOnBoard.length > 0 ? checkConnectivity(tilesOnBoard) : true;
   const noFloating = tilesOnBoard.every(t => isPartOfWord(t.r, t.c));
   const rackEmpty = rack.length === 0;
 
-  // PEEL condition: all tiles placed, all connected, all form valid words, no floating letters
-  if (rackEmpty && tilesOnBoard.length > 0 && connected && allValid && hasWords && noFloating) {
+  if (rackEmpty && tilesOnBoard.length > 0 && connected && allValid && hasWords && noFloating && !peelCooldown) {
     doPeel();
   }
 
-  // Status message
   const statusEl = document.getElementById('status-msg');
   if (rackEmpty && tilesOnBoard.length > 0) {
-    if (!allValid) {
-      statusEl.textContent = 'Some words are invalid';
-      statusEl.style.color = 'var(--invalid)';
-    } else if (!connected) {
-      statusEl.textContent = 'All tiles must be connected';
-      statusEl.style.color = 'var(--invalid)';
-    } else if (!noFloating) {
-      statusEl.textContent = 'Single letters must be part of a word';
-      statusEl.style.color = 'var(--invalid)';
-    } else {
-      statusEl.textContent = '';
-    }
+    if (!allValid) { statusEl.textContent = 'Some words are invalid'; statusEl.style.color = 'var(--invalid)'; }
+    else if (!connected) { statusEl.textContent = 'All tiles must be connected'; statusEl.style.color = 'var(--invalid)'; }
+    else if (!noFloating) { statusEl.textContent = 'Single letters must be part of a word'; statusEl.style.color = 'var(--invalid)'; }
+    else { statusEl.textContent = ''; }
   } else {
     statusEl.textContent = '';
   }
@@ -348,123 +284,150 @@ function validateBoard() {
 
 function findBoardWords() {
   const words = [];
-
-  // Horizontal words
   for (let r = 0; r < BOARD_SIZE; r++) {
     let c = 0;
     while (c < BOARD_SIZE) {
       if (board[r][c]) {
-        let word = '';
-        const cells = [];
-        while (c < BOARD_SIZE && board[r][c]) {
-          word += board[r][c];
-          cells.push({ row: r, col: c });
-          c++;
-        }
-        if (word.length >= 2) {
-          words.push({ word, cells, direction: 'h' });
-        }
-      } else {
-        c++;
-      }
+        let word = ''; const cs = [];
+        while (c < BOARD_SIZE && board[r][c]) { word += board[r][c]; cs.push({ row: r, col: c }); c++; }
+        if (word.length >= 2) words.push({ word, cells: cs, direction: 'h' });
+      } else c++;
     }
   }
-
-  // Vertical words
   for (let c = 0; c < BOARD_SIZE; c++) {
     let r = 0;
     while (r < BOARD_SIZE) {
       if (board[r][c]) {
-        let word = '';
-        const cells = [];
-        while (r < BOARD_SIZE && board[r][c]) {
-          word += board[r][c];
-          cells.push({ row: r, col: c });
-          r++;
-        }
-        if (word.length >= 2) {
-          words.push({ word, cells, direction: 'v' });
-        }
-      } else {
-        r++;
-      }
+        let word = ''; const cs = [];
+        while (r < BOARD_SIZE && board[r][c]) { word += board[r][c]; cs.push({ row: r, col: c }); r++; }
+        if (word.length >= 2) words.push({ word, cells: cs, direction: 'v' });
+      } else r++;
     }
   }
-
   return words;
 }
 
 function isPartOfWord(r, c) {
-  // Check if tile at (r,c) is part of a horizontal or vertical word (2+ letters)
-  // Horizontal
   if ((c > 0 && board[r][c - 1]) || (c < BOARD_SIZE - 1 && board[r][c + 1])) return true;
-  // Vertical
   if ((r > 0 && board[r - 1][c]) || (r < BOARD_SIZE - 1 && board[r + 1][c])) return true;
   return false;
 }
 
 function checkConnectivity(tiles) {
   if (tiles.length <= 1) return true;
-
   const key = (r, c) => `${r},${c}`;
   const tileSet = new Set(tiles.map(t => key(t.r, t.c)));
   const visited = new Set();
   const queue = [tiles[0]];
   visited.add(key(tiles[0].r, tiles[0].c));
-
   while (queue.length > 0) {
     const { r, c } = queue.shift();
-    const neighbors = [
-      { r: r - 1, c }, { r: r + 1, c },
-      { r, c: c - 1 }, { r, c: c + 1 }
-    ];
-    for (const n of neighbors) {
+    for (const n of [{ r: r-1, c }, { r: r+1, c }, { r, c: c-1 }, { r, c: c+1 }]) {
       const k = key(n.r, n.c);
-      if (tileSet.has(k) && !visited.has(k)) {
-        visited.add(k);
-        queue.push(n);
-      }
+      if (tileSet.has(k) && !visited.has(k)) { visited.add(k); queue.push(n); }
     }
   }
-
   return visited.size === tiles.length;
 }
 
 // ============================================================
-// PEEL — add a new tile
+// Confetti
+// ============================================================
+
+function fireConfetti(duration) {
+  const canvas = document.getElementById('confetti-canvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  const particles = [];
+  const colors = ['#f1c40f', '#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#e67e22', '#1abc9c'];
+
+  for (let i = 0; i < 150; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height - canvas.height,
+      w: Math.random() * 10 + 5,
+      h: Math.random() * 6 + 3,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      vx: (Math.random() - 0.5) * 4,
+      vy: Math.random() * 3 + 2,
+      rot: Math.random() * 360,
+      vr: (Math.random() - 0.5) * 10
+    });
+  }
+
+  const start = Date.now();
+  function frame() {
+    const elapsed = Date.now() - start;
+    if (elapsed > duration) { ctx.clearRect(0, 0, canvas.width, canvas.height); return; }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const fade = elapsed > duration - 500 ? (duration - elapsed) / 500 : 1;
+    ctx.globalAlpha = fade;
+
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vr;
+      if (p.y > canvas.height) { p.y = -10; p.x = Math.random() * canvas.width; }
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot * Math.PI / 180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+    requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+// ============================================================
+// PEEL — add new tiles
 // ============================================================
 
 const PEEL_COUNT = 15;
 
 function doPeel() {
+  peelCooldown = true;
+
   if (pool.length === 0) {
-    document.getElementById('status-msg').textContent = 'You win! No tiles left!';
-    document.getElementById('status-msg').style.color = 'var(--accent)';
+    // VICTORY — all 144 tiles placed!
+    fireConfetti(8000);
+    showVictoryScreen();
     return;
   }
 
+  // Confetti burst
+  fireConfetti(2500);
+
+  // Show PEEL overlay
+  const overlay = document.getElementById('peel-overlay');
+  overlay.classList.remove('hidden');
+  const peelText = overlay.querySelector('.peel-text');
   const count = Math.min(PEEL_COUNT, pool.length);
+  peelText.textContent = `PEEL! +${count}`;
+  peelText.style.animation = 'none';
+  peelText.offsetHeight; // reflow
+  peelText.style.animation = '';
+
+  setTimeout(() => { overlay.classList.add('hidden'); }, 1200);
+
   drawTiles(count);
   updateCounts();
 
-  // Flash animation
   document.getElementById('app').classList.add('peel-flash');
   setTimeout(() => document.getElementById('app').classList.remove('peel-flash'), 800);
 
-  document.getElementById('status-msg').textContent = `PEEL! +${count} tiles`;
-  document.getElementById('status-msg').style.color = 'var(--accent)';
-  setTimeout(() => {
-    document.getElementById('status-msg').textContent = '';
-  }, 1500);
-
   renderRack();
-  // Add pop-in animation to new tiles
   const rackTiles = document.querySelectorAll('.rack-tile');
   for (let i = Math.max(0, rackTiles.length - count); i < rackTiles.length; i++) {
     rackTiles[i].classList.add('tile-new');
   }
 
   scheduleWordSuggestions();
+  setTimeout(() => { peelCooldown = false; }, 1500);
 }
 
 function updateCounts() {
@@ -474,12 +437,257 @@ function updateCounts() {
 
 function countBoardTiles() {
   let count = 0;
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
+  for (let r = 0; r < BOARD_SIZE; r++)
+    for (let c = 0; c < BOARD_SIZE; c++)
       if (board[r][c]) count++;
-    }
-  }
   return count;
+}
+
+// ============================================================
+// Victory Screen
+// ============================================================
+
+function showVictoryScreen() {
+  fireConfetti(8000);
+  document.getElementById('victory-screen').classList.remove('hidden');
+}
+
+document.getElementById('challenge-alun-btn').addEventListener('click', () => {
+  document.getElementById('victory-screen').classList.add('hidden');
+  startBossBattle();
+});
+
+document.getElementById('play-again-btn').addEventListener('click', () => {
+  location.reload();
+});
+
+// ============================================================
+// ALUN Boss Battle — Speed Round
+// ============================================================
+
+let bossLetters = [];
+let bossUsedWords = [];
+let alunHp = 50;
+let playerBossHp = 50;
+let bossTimer = null;
+let bossTimeLeft = 300; // 5 minutes in seconds
+let bossPool = []; // the 144-letter pool for swaps
+let swapLetterIndex = null;
+
+function startBossBattle() {
+  // Build 50 random letters
+  const allLetters = [];
+  for (const [letter, count] of Object.entries(LETTER_DIST)) {
+    for (let i = 0; i < count; i++) allLetters.push(letter);
+  }
+  shuffle(allLetters);
+  bossLetters = allLetters.slice(0, 50);
+  bossPool = allLetters.slice(50); // remaining for swaps
+
+  bossUsedWords = [];
+  alunHp = 50;
+  playerBossHp = 50;
+  bossTimeLeft = 300;
+  swapLetterIndex = null;
+
+  document.getElementById('boss-battle').classList.remove('hidden');
+  renderBossState();
+  document.getElementById('boss-word-input').value = '';
+  document.getElementById('boss-word-input').focus();
+  document.getElementById('boss-feedback').textContent = '';
+  document.getElementById('boss-feedback').className = 'boss-feedback';
+
+  // Start timer
+  updateBossTimer();
+  bossTimer = setInterval(() => {
+    bossTimeLeft--;
+    updateBossTimer();
+    if (bossTimeLeft <= 0) {
+      clearInterval(bossTimer);
+      // Time's up — check who won
+      if (alunHp <= 0) bossVictory();
+      else bossDefeat('Time ran out! Alun survives with ' + alunHp + ' HP.');
+    }
+  }, 1000);
+}
+
+function updateBossTimer() {
+  const m = Math.floor(bossTimeLeft / 60);
+  const s = bossTimeLeft % 60;
+  const el = document.getElementById('boss-timer');
+  el.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+  if (bossTimeLeft <= 30) el.style.animation = 'bossNamePulse 0.5s infinite';
+  else el.style.animation = '';
+}
+
+function renderBossState() {
+  // HP bars
+  document.getElementById('alun-hp-fill').style.width = `${(alunHp / 50) * 100}%`;
+  document.getElementById('player-hp-fill').style.width = `${(playerBossHp / 50) * 100}%`;
+  document.getElementById('alun-hp-text').textContent = `${alunHp} / 50 HP`;
+  document.getElementById('player-hp-text-boss').textContent = `${playerBossHp} / 50 HP`;
+
+  // Letters
+  const container = document.getElementById('boss-letters');
+  container.innerHTML = '';
+  bossLetters.forEach((letter, i) => {
+    const tile = document.createElement('div');
+    tile.className = 'boss-letter-tile';
+    if (swapLetterIndex === i) tile.classList.add('selected-swap');
+    tile.textContent = letter;
+    tile.addEventListener('click', () => {
+      swapLetterIndex = (swapLetterIndex === i) ? null : i;
+      renderBossState();
+    });
+    container.appendChild(tile);
+  });
+  document.getElementById('boss-letter-count').textContent = bossLetters.length;
+
+  // Used words
+  const usedContainer = document.getElementById('boss-words-used');
+  usedContainer.innerHTML = '';
+  bossUsedWords.forEach(w => {
+    const tag = document.createElement('span');
+    tag.className = 'boss-used-word ' + (w.valid ? 'valid-used' : 'invalid-used');
+    tag.textContent = w.word + (w.valid ? ' +' + w.word.length : ' -' + w.word.length);
+    usedContainer.appendChild(tag);
+  });
+}
+
+// Submit word
+function bossSubmitWord() {
+  const input = document.getElementById('boss-word-input');
+  const word = input.value.trim().toUpperCase();
+  input.value = '';
+  input.focus();
+
+  if (!word) return;
+
+  // Check if word was already used
+  if (bossUsedWords.some(w => w.word === word)) {
+    showBossFeedback('Already used!', false);
+    return;
+  }
+
+  const fb = document.getElementById('boss-feedback');
+
+  if (isValidWord(word) && canMakeFromBossLetters(word)) {
+    // CORRECT — remove letters, damage Alun
+    removeBossLetters(word);
+    alunHp = Math.max(0, alunHp - word.length);
+    bossUsedWords.push({ word, valid: true });
+    showBossFeedback(`${word} — ${word.length} damage to Alun!`, true);
+  } else if (!isValidWord(word)) {
+    // INCORRECT — damage player, keep letters
+    playerBossHp = Math.max(0, playerBossHp - word.length);
+    bossUsedWords.push({ word, valid: false });
+    showBossFeedback(`${word} is not a valid word! You take ${word.length} damage!`, false);
+  } else {
+    // Valid word but can't make it from letters
+    showBossFeedback(`You don't have the letters for ${word}!`, false);
+    return;
+  }
+
+  renderBossState();
+
+  // Check win/lose
+  if (alunHp <= 0) {
+    clearInterval(bossTimer);
+    setTimeout(() => bossVictory(), 500);
+  } else if (playerBossHp <= 0) {
+    clearInterval(bossTimer);
+    setTimeout(() => bossDefeat('Alun overwhelmed you with his dark power!'), 500);
+  }
+}
+
+function canMakeFromBossLetters(word) {
+  const available = {};
+  bossLetters.forEach(l => { available[l] = (available[l] || 0) + 1; });
+  for (const ch of word) {
+    if (!available[ch] || available[ch] <= 0) return false;
+    available[ch]--;
+  }
+  return true;
+}
+
+function removeBossLetters(word) {
+  const toRemove = word.split('');
+  for (const ch of toRemove) {
+    const idx = bossLetters.indexOf(ch);
+    if (idx !== -1) bossLetters.splice(idx, 1);
+  }
+}
+
+function showBossFeedback(msg, correct) {
+  const fb = document.getElementById('boss-feedback');
+  fb.textContent = msg;
+  fb.className = 'boss-feedback ' + (correct ? 'correct-fb' : 'incorrect-fb');
+  // Re-trigger animation for incorrect
+  if (!correct) {
+    fb.style.animation = 'none';
+    fb.offsetHeight;
+    fb.style.animation = '';
+  }
+}
+
+// Swap: return 1 selected letter, get 3 new ones
+document.getElementById('boss-swap-btn').addEventListener('click', () => {
+  if (swapLetterIndex === null) {
+    showBossFeedback('Click a letter tile first, then swap', false);
+    return;
+  }
+  if (bossPool.length < 3) {
+    showBossFeedback('Not enough letters in the pool to swap!', false);
+    return;
+  }
+
+  // Remove selected letter, add to pool
+  const removed = bossLetters.splice(swapLetterIndex, 1)[0];
+  bossPool.push(removed);
+  shuffle(bossPool);
+
+  // Draw 3
+  for (let i = 0; i < 3 && bossPool.length > 0; i++) {
+    bossLetters.push(bossPool.pop());
+  }
+
+  swapLetterIndex = null;
+  showBossFeedback(`Swapped ${removed} for 3 new letters!`, true);
+  renderBossState();
+});
+
+// Enter to submit
+document.getElementById('boss-word-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); bossSubmitWord(); }
+});
+
+document.getElementById('boss-submit-btn').addEventListener('click', bossSubmitWord);
+
+// Boss Victory
+function bossVictory() {
+  document.getElementById('boss-battle').classList.add('hidden');
+  document.getElementById('boss-victory').classList.remove('hidden');
+  fireConfetti(10000);
+
+  const msgs = [
+    'The word demon ALUN shatters into a thousand letters, scattered by the hurricane of your vocabulary! You stand among the ruins of his lexicon, UNDEFEATED!',
+    'ALUN howls as your final word pierces his dark heart! "IMPOSSIBLE!" he screams, dissolving into alphabet soup. You are the SUPREME WORDSMITH!',
+    'With devastating linguistic precision, you reduce ALUN to nothing but silent consonants! The beast is VANQUISHED! Your vocabulary knows NO BOUNDS!'
+  ];
+  document.getElementById('boss-victory-msg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
+}
+
+// Boss Defeat
+function bossDefeat(reason) {
+  document.getElementById('boss-battle').classList.add('hidden');
+  document.getElementById('boss-defeat').classList.remove('hidden');
+
+  const msgs = [
+    `${reason} ALUN looms over you, flames crackling. "Your words are WEAK, mortal. Study harder and return!" But you feel it in your bones — next time, you WILL prevail.`,
+    `${reason} The word demon cackles as darkness closes in. "So close, yet so far from mastery!" But defeat only sharpens a true wordsmith's hunger.`,
+    `${reason} ALUN grins with jagged teeth. "A valiant effort... for a beginner." He vanishes in smoke, but leaves behind a whisper: "I'll be waiting."`
+  ];
+  document.getElementById('boss-defeat-msg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
 }
 
 // ============================================================
@@ -494,20 +702,16 @@ function scheduleWordSuggestions() {
 function updateWordSuggestions() {
   if (!dictionary) return;
 
-  // Only use loose letters (rack tiles not yet placed on the board)
   const allLetters = [...rack];
 
   if (allLetters.length === 0) {
-    document.getElementById('word-list').innerHTML = '<div style="padding:1rem;color:var(--text-muted)">No tiles yet</div>';
+    document.getElementById('word-list').innerHTML = '<div style="padding:1rem;color:var(--text-muted)">No loose tiles</div>';
+    document.getElementById('word-count-label').textContent = 'Place all tiles to PEEL';
     return;
   }
 
-  // Find all possible words client-side for speed
   const available = {};
-  allLetters.forEach(l => {
-    const u = l.toUpperCase();
-    available[u] = (available[u] || 0) + 1;
-  });
+  allLetters.forEach(l => { available[l.toUpperCase()] = (available[l.toUpperCase()] || 0) + 1; });
 
   const results = [];
   for (const word of Object.keys(dictionary)) {
@@ -518,7 +722,6 @@ function updateWordSuggestions() {
   }
 
   results.sort((a, b) => a.length - b.length || a.word.localeCompare(b.word));
-
   renderWordSuggestions(results);
 }
 
@@ -533,9 +736,8 @@ function canMakeWord(word, available) {
 
 function renderWordSuggestions(results) {
   const container = document.getElementById('word-list');
-  document.getElementById('word-count-label').textContent = `${results.length.toLocaleString()} possible words from your letters`;
+  document.getElementById('word-count-label').textContent = `${results.length.toLocaleString()} possible words from rack`;
 
-  // Group by length
   const groups = {};
   for (const r of results) {
     if (!groups[r.length]) groups[r.length] = [];
@@ -549,22 +751,12 @@ function renderWordSuggestions(results) {
     for (const item of group) {
       const def = item.definition || '';
       const shortDef = def.length > 80 ? def.substring(0, 77) + '...' : def;
-      html += `
-        <div class="word-item">
-          <div class="word-item-word">${item.word}</div>
-          <div class="word-item-def">${shortDef}</div>
-        </div>
-      `;
+      html += `<div class="word-item"><div class="word-item-word">${item.word}</div><div class="word-item-def">${shortDef}</div></div>`;
     }
   }
 
   container.innerHTML = html;
 }
-
-// ============================================================
-// Serve dictionary.json statically
-// ============================================================
-// (handled by Express static serving)
 
 // ============================================================
 // Start

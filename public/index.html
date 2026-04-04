@@ -42,6 +42,80 @@
         <div id="word-list"></div>
       </div>
     </div>
+
+    <!-- Confetti canvas -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- PEEL celebration overlay -->
+    <div id="peel-overlay" class="overlay hidden">
+      <div class="peel-text">PEEL! +15</div>
+    </div>
+
+    <!-- Victory screen -->
+    <div id="victory-screen" class="overlay hidden">
+      <div class="victory-content">
+        <div class="victory-title">VICTORY!</div>
+        <div class="victory-sub">You placed all 144 tiles!</div>
+        <div class="victory-monster" id="alun-sprite"></div>
+        <button id="challenge-alun-btn" class="boss-challenge-btn">Challenge Alun?</button>
+        <button id="play-again-btn" class="play-again-btn-v">Play Again</button>
+      </div>
+    </div>
+
+    <!-- Alun Boss Battle -->
+    <div id="boss-battle" class="overlay hidden">
+      <div class="boss-battle-content">
+        <div class="boss-header">
+          <div class="boss-timer-area">
+            <span id="boss-timer">5:00</span>
+          </div>
+        </div>
+        <div class="boss-hud">
+          <div class="boss-combatant">
+            <div class="boss-name-alun">🔥 ALUN 🔥</div>
+            <div class="boss-hp-bar"><div id="alun-hp-fill" class="boss-hp-fill alun-hp"></div></div>
+            <div id="alun-hp-text" class="boss-hp-text">50 / 50 HP</div>
+          </div>
+          <div class="boss-vs">VS</div>
+          <div class="boss-combatant">
+            <div id="player-boss-name" class="boss-name-player">You</div>
+            <div class="boss-hp-bar"><div id="player-hp-fill" class="boss-hp-fill player-hp-boss"></div></div>
+            <div id="player-hp-text-boss" class="boss-hp-text">50 / 50 HP</div>
+          </div>
+        </div>
+        <div class="boss-monster-display" id="alun-battle-sprite"></div>
+        <div id="boss-feedback" class="boss-feedback"></div>
+        <div class="boss-letters-area">
+          <div class="boss-letters-label">Your Letters (<span id="boss-letter-count">50</span>):</div>
+          <div id="boss-letters" class="boss-letters"></div>
+        </div>
+        <div class="boss-input-area">
+          <input type="text" id="boss-word-input" placeholder="Type a word and press Enter..."
+                 autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button id="boss-submit-btn">Submit</button>
+          <button id="boss-swap-btn" class="boss-swap-btn" title="Return 1 letter, get 3 new ones">Swap 1→3</button>
+        </div>
+        <div id="boss-words-used" class="boss-words-used"></div>
+      </div>
+    </div>
+
+    <!-- Boss Victory -->
+    <div id="boss-victory" class="overlay hidden">
+      <div class="victory-content boss-win">
+        <div class="victory-title">ALUN DEFEATED!</div>
+        <div id="boss-victory-msg" class="victory-sub"></div>
+        <button onclick="location.reload()" class="play-again-btn-v">Play Again</button>
+      </div>
+    </div>
+
+    <!-- Boss Defeat -->
+    <div id="boss-defeat" class="overlay hidden">
+      <div class="victory-content boss-lose">
+        <div class="defeat-title">DEFEATED...</div>
+        <div id="boss-defeat-msg" class="victory-sub"></div>
+        <button onclick="location.reload()" class="play-again-btn-v">Try Again</button>
+      </div>
+    </div>
   </div>
 
   <script src="game.js"></script>
