@@ -197,6 +197,47 @@ function renderRack() {
 }
 
 // ============================================================
+// Swap 1→3 (main game)
+// ============================================================
+
+document.getElementById('main-swap-btn').addEventListener('click', () => {
+  if (!selectedTile || selectedTile.source !== 'rack') {
+    const statusEl = document.getElementById('status-msg');
+    statusEl.textContent = 'Click a rack tile first, then Swap';
+    statusEl.style.color = 'var(--accent)';
+    setTimeout(() => { statusEl.textContent = ''; }, 2000);
+    return;
+  }
+  if (pool.length < 3) {
+    const statusEl = document.getElementById('status-msg');
+    statusEl.textContent = 'Not enough tiles in the pool!';
+    statusEl.style.color = 'var(--invalid)';
+    setTimeout(() => { statusEl.textContent = ''; }, 2000);
+    return;
+  }
+
+  // Remove selected tile from rack, put back in pool
+  const removed = rack.splice(selectedTile.index, 1)[0];
+  pool.push(removed);
+  shuffle(pool);
+
+  // Draw 3
+  for (let i = 0; i < 3 && pool.length > 0; i++) {
+    rack.push(pool.pop());
+  }
+
+  selectedTile = null;
+  updateCounts();
+  renderRack();
+  scheduleWordSuggestions();
+
+  const statusEl = document.getElementById('status-msg');
+  statusEl.textContent = `Swapped ${removed} for 3 new tiles`;
+  statusEl.style.color = 'var(--accent)';
+  setTimeout(() => { statusEl.textContent = ''; }, 2000);
+});
+
+// ============================================================
 // Interaction
 // ============================================================
 
