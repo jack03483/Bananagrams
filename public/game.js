@@ -518,13 +518,19 @@ function showVictoryScreen() {
   }, 3000);
 }
 
-document.getElementById('challenge-alun-btn').addEventListener('click', () => {
-  document.getElementById('boss-reveal').classList.add('hidden');
+// Any click or key on the boss reveal starts the battle
+function handleBossRevealContinue() {
+  const reveal = document.getElementById('boss-reveal');
+  if (reveal.classList.contains('hidden')) return;
+  reveal.classList.add('hidden');
   startBossBattle();
-});
+}
 
-document.getElementById('play-again-btn').addEventListener('click', () => {
-  location.reload();
+document.getElementById('boss-reveal').addEventListener('click', handleBossRevealContinue);
+document.addEventListener('keydown', (e) => {
+  if (!document.getElementById('boss-reveal').classList.contains('hidden')) {
+    handleBossRevealContinue();
+  }
 });
 
 // ============================================================
