@@ -899,6 +899,14 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
+// DEV: Skip to Alun (remove before git push)
+// ============================================================
+
+document.getElementById('dev-skip-btn').addEventListener('click', () => {
+  showVictoryScreen();
+});
+
+// ============================================================
 // Start
 // ============================================================
 
