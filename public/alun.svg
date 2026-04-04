@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220">
+  <defs>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="bigGlow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <radialGradient id="bodyGrad" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#4a1010"/>
+      <stop offset="100%" stop-color="#1a0505"/>
+    </radialGradient>
+    <radialGradient id="eyeGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff4444"/>
+      <stop offset="60%" stop-color="#cc0000"/>
+      <stop offset="100%" stop-color="#880000"/>
+    </radialGradient>
+    <linearGradient id="hornGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a0a0a"/>
+      <stop offset="100%" stop-color="#5a1515"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Aura -->
+  <ellipse cx="100" cy="130" rx="90" ry="80" fill="#200000" opacity="0.4" filter="url(#bigGlow)"/>
+
+  <!-- Body -->
+  <path d="M40 90 Q40 180 100 190 Q160 180 160 90 Q160 60 100 50 Q40 60 40 90Z" fill="url(#bodyGrad)" stroke="#5a1515" stroke-width="2"/>
+
+  <!-- Cracks/texture -->
+  <path d="M70 80 L75 110 L68 140" stroke="#5a1515" stroke-width="1" fill="none" opacity="0.5"/>
+  <path d="M130 85 L125 115 L132 145" stroke="#5a1515" stroke-width="1" fill="none" opacity="0.5"/>
+  <path d="M90 70 L95 95" stroke="#5a1515" stroke-width="1" fill="none" opacity="0.4"/>
+  <path d="M110 72 L108 98" stroke="#5a1515" stroke-width="1" fill="none" opacity="0.4"/>
+
+  <!-- Left horn -->
+  <path d="M60 70 Q45 30 30 10 Q50 35 65 55Z" fill="url(#hornGrad)" stroke="#3a0a0a" stroke-width="1"/>
+  <!-- Right horn -->
+  <path d="M140 70 Q155 30 170 10 Q150 35 135 55Z" fill="url(#hornGrad)" stroke="#3a0a0a" stroke-width="1"/>
+
+  <!-- Brow ridge -->
+  <path d="M60 85 Q80 75 100 80 Q120 75 140 85" stroke="#2a0808" stroke-width="4" fill="none" stroke-linecap="round"/>
+
+  <!-- Left eye socket -->
+  <ellipse cx="78" cy="100" rx="16" ry="14" fill="#0a0000"/>
+  <!-- Right eye socket -->
+  <ellipse cx="122" cy="100" rx="16" ry="14" fill="#0a0000"/>
+
+  <!-- Left eye -->
+  <ellipse cx="78" cy="100" rx="10" ry="9" fill="url(#eyeGrad)" filter="url(#glow)"/>
+  <ellipse cx="78" cy="100" rx="4" ry="6" fill="#000"/>
+  <ellipse cx="76" cy="97" rx="2" ry="1.5" fill="#ff8888" opacity="0.6"/>
+
+  <!-- Right eye -->
+  <ellipse cx="122" cy="100" rx="10" ry="9" fill="url(#eyeGrad)" filter="url(#glow)"/>
+  <ellipse cx="122" cy="100" rx="4" ry="6" fill="#000"/>
+  <ellipse cx="120" cy="97" rx="2" ry="1.5" fill="#ff8888" opacity="0.6"/>
+
+  <!-- Nose -->
+  <path d="M95 115 L100 120 L105 115" stroke="#5a2020" stroke-width="2" fill="none"/>
+
+  <!-- Mouth -->
+  <path d="M70 140 Q85 155 100 150 Q115 155 130 140" fill="#1a0000" stroke="#3a0a0a" stroke-width="2"/>
+
+  <!-- Teeth top -->
+  <path d="M72 140 L78 150 L84 140 L90 150 L96 140 L102 150 L108 140 L114 150 L120 140 L126 150 L130 140"
+        fill="#d4c4a0" stroke="#8a7a60" stroke-width="0.5"/>
+
+  <!-- Teeth bottom -->
+  <path d="M78 150 L82 142 L88 150 L94 142 L100 150 L106 142 L112 150 L118 142 L124 150"
+        fill="#c4b490" stroke="#8a7a60" stroke-width="0.5"/>
+
+  <!-- Drool/ichor -->
+  <path d="M88 150 Q87 160 89 168" stroke="#5a2020" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <path d="M112 150 Q113 162 111 172" stroke="#5a2020" stroke-width="1.5" fill="none" opacity="0.6"/>
+
+  <!-- Shoulder spikes left -->
+  <path d="M42 100 L25 85 L45 95Z" fill="#3a0a0a"/>
+  <path d="M44 115 L22 108 L43 110Z" fill="#3a0a0a"/>
+
+  <!-- Shoulder spikes right -->
+  <path d="M158 100 L175 85 L155 95Z" fill="#3a0a0a"/>
+  <path d="M156 115 L178 108 L157 110Z" fill="#3a0a0a"/>
+
+  <!-- Name plate -->
+  <text x="100" y="210" text-anchor="middle" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#cc3333" filter="url(#glow)">A L U N</text>
+</svg>
