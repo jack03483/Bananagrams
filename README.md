@@ -4,10 +4,19 @@ A local browser-based Bananagrams word game with 104k+ word dictionary and live 
 
 ## Setup
 
-```bash
+```
 git clone https://github.com/YOUR-USERNAME/bananagrams.git
 cd bananagrams
-bash start.sh
+```
+
+**Mac / Linux:**
+```
+python3 -m http.server 3001 --directory public
+```
+
+**Windows:**
+```
+python -m http.server 3001 --directory public
 ```
 
 Open **http://localhost:3001** in your browser. Done.
