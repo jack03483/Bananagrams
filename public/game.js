@@ -643,20 +643,23 @@ function bossSubmitWord() {
 
   const fb = document.getElementById('boss-feedback');
 
-  if (isValidWord(word) && canMakeFromBossLetters(word)) {
-    // CORRECT — remove letters, damage the Boss
+  const valid = isValidWord(word);
+  const canMake = canMakeFromBossLetters(word);
+
+  if (valid && canMake) {
+    // CORRECT — remove letters, damage Boss
     removeBossLetters(word);
     alunHp = Math.max(0, alunHp - word.length);
     bossUsedWords.push({ word, valid: true });
     showBossFeedback(`${word} — ${word.length} damage to Boss!`, true);
-  } else if (!isValidWord(word)) {
-    // INCORRECT — damage player, keep letters
+  } else if (!valid) {
+    // NOT A WORD — damage player, keep letters
     playerBossHp = Math.max(0, playerBossHp - word.length);
     bossUsedWords.push({ word, valid: false });
-    showBossFeedback(`${word} is not a valid word! You take ${word.length} damage!`, false);
+    showBossFeedback(`${word} — not a word! You take ${word.length} damage!`, false);
   } else {
-    // Valid word but can't make it from letters
-    showBossFeedback(`You don't have the letters for ${word}!`, false);
+    // Valid word but missing letters — no damage, just a warning
+    showBossFeedback(`You don't have the letters for ${word}`, false);
     return;
   }
 
@@ -742,9 +745,9 @@ function bossVictory() {
   fireConfetti(10000);
 
   const msgs = [
-    'Every letter bent to your will. Every word a weapon. You are the SUPREME WORDSMITH!',
-    '50 letters. 5 minutes. Zero mercy. You crushed it.',
-    'The dictionary fears you. Absolute domination.'
+    'Well played.',
+    'Clean run.',
+    'Not bad at all.'
   ];
   document.getElementById('boss-victory-msg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
 }
@@ -755,9 +758,9 @@ function bossDefeat(reason) {
   document.getElementById('boss-defeat').classList.remove('hidden');
 
   const msgs = [
-    `${reason} Not this time. But the letters are still there. Go again.`,
-    `${reason} Close, but not close enough. You know more words than you think.`,
-    `${reason} Shake it off. The speed round doesn't forgive, but you can.`
+    `${reason}`,
+    `${reason}`,
+    `${reason}`
   ];
   document.getElementById('boss-defeat-msg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
 }
@@ -916,14 +919,6 @@ document.addEventListener('keydown', (e) => {
     renderBoard();
     return;
   }
-});
-
-// ============================================================
-// DEV: Skip to boss (remove before git push)
-// ============================================================
-
-document.getElementById('dev-skip-btn').addEventListener('click', () => {
-  showVictoryScreen();
 });
 
 // ============================================================
