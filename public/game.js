@@ -600,15 +600,17 @@ function bossSubmitWord() {
     bossUsedWords.push({ word, valid: true });
     showBossFeedback(`${word} — ${word.length} damage!`, true);
   } else if (valid && canMake && word.length < bossMinWordLen) {
-    showBossFeedback(`Too short! Need ${bossMinWordLen}+ letters at this level.`, false);
-    return;
+    playerBossHp = Math.max(0, playerBossHp - word.length);
+    bossUsedWords.push({ word, valid: false });
+    showBossFeedback(`${word} — too short! Need ${bossMinWordLen}+. You take ${word.length}!`, false);
   } else if (!valid) {
     playerBossHp = Math.max(0, playerBossHp - word.length);
     bossUsedWords.push({ word, valid: false });
-    showBossFeedback(`${word} — not a word! You take ${word.length} damage!`, false);
+    showBossFeedback(`${word} — not a word! You take ${word.length}!`, false);
   } else {
-    showBossFeedback(`You don't have the letters for ${word}`, false);
-    return;
+    playerBossHp = Math.max(0, playerBossHp - word.length);
+    bossUsedWords.push({ word, valid: false });
+    showBossFeedback(`${word} — wrong letters! You take ${word.length}!`, false);
   }
 
   renderBossState();
