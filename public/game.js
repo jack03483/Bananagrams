@@ -368,6 +368,13 @@ function validateBoard() {
   panel.innerHTML = panelHtml;
   const rackEmpty = rack.length === 0;
 
+  // Mark floating tiles (single letters not part of any word) as invalid
+  for (const t of tilesOnBoard) {
+    if (!isPartOfWord(t.r, t.c)) {
+      cells[t.r * BOARD_SIZE + t.c].classList.add('invalid-word');
+    }
+  }
+
   // Check win: >= TILES_TO_WIN on board, all valid, connected, no floaters (rack doesn't need to be empty)
   if (tilesOnBoard.length >= TILES_TO_WIN && connected && allValid && hasWords && noFloating && !peelCooldown) {
     peelCooldown = true;
@@ -1710,7 +1717,14 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (key === 'Escape') { boardFocused = false; selectedTile = null; renderBoard(); }
+  if (key === 'Escape') { boardFocused = false; selectedTile = null; renderBoard(); return; }
+
+  // Enter with a rack tile selected = swap 1 for 3
+  if (key === 'Enter' && selectedTile && selectedTile.source === 'rack') {
+    e.preventDefault();
+    document.getElementById('main-swap-btn').click();
+    return;
+  }
 });
 
 // ============================================================
