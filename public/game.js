@@ -794,6 +794,7 @@ let tetrisScore = 0;
 let tetrisSpeed = 1;
 let tetrisLastDrop = 0;
 let tetrisAnimFrame = null;
+let tetrisLastWord = null;
 
 const TETRIS_LETTERS = 'AAAAAEEEEEIIIIOOOOUUUAAEEIIOOBCDDFFGGHHJKLLMMNNPPRRSSTTWY';
 
@@ -812,6 +813,7 @@ function startWordTetris() {
   tetrisScore = 0;
   tetrisSpeed = 1;
   tetrisHold = null;
+  tetrisLastWord = null;
   tetrisNext = [randomTetrisLetter(), randomTetrisLetter(), randomTetrisLetter()];
   tetrisFalling = null;
 
@@ -878,7 +880,7 @@ function findBestWord(letters, positions) {
   let bestLen = 0;
 
   for (let start = 0; start < letters.length; start++) {
-    for (let end = start + 2; end <= letters.length; end++) {
+    for (let end = start + 3; end <= letters.length; end++) {
       const sub = letters.substring(start, end);
       if (sub.length > bestLen && isValidWord(sub)) {
         bestWord = sub;
@@ -910,12 +912,12 @@ function checkTetrisWords() {
             positions.push({ r, c });
             c++;
           }
-          if (letters.length >= 2) {
+          if (letters.length >= 3) {
             const found = findBestWord(letters, positions);
             if (found) {
               for (const pos of found.positions) tetrisGrid[pos.r][pos.c] = null;
-              // Exponential scoring: 2^length
               tetrisScore += Math.pow(2, found.word.length);
+              tetrisLastWord = found.word;
               cleared = true;
             }
           }
@@ -935,11 +937,12 @@ function checkTetrisWords() {
             positions.push({ r, c });
             r++;
           }
-          if (letters.length >= 2) {
+          if (letters.length >= 3) {
             const found = findBestWord(letters, positions);
             if (found) {
               for (const pos of found.positions) tetrisGrid[pos.r][pos.c] = null;
               tetrisScore += Math.pow(2, found.word.length);
+              tetrisLastWord = found.word;
               cleared = true;
             }
           }
@@ -953,6 +956,13 @@ function checkTetrisWords() {
   document.getElementById('tetris-score').textContent = tetrisScore.toLocaleString();
   tetrisSpeed = Math.floor(tetrisScore / 100) + 1;
   document.getElementById('tetris-speed').textContent = tetrisSpeed;
+
+  // Show last word definition
+  if (tetrisLastWord) {
+    const def = getDefinition(tetrisLastWord);
+    document.getElementById('tetris-last-word').innerHTML =
+      `<strong>${tetrisLastWord}</strong>: ${def || 'valid word'} (+${Math.pow(2, tetrisLastWord.length)})`;
+  }
 
   // Check win
   if (tetrisScore >= TETRIS_WIN_SCORE) {
