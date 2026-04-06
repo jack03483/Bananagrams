@@ -10,12 +10,24 @@
   <div id="app">
     <header id="top-bar">
       <h1>🍌 Bananagrams</h1>
+      <div id="player-name-bar" class="player-name-bar"></div>
       <div id="game-info">
         <span id="tile-count">Board: 0 / 100</span>
         <span id="pool-count">Pool: 129</span>
         <span id="status-msg"></span>
       </div>
     </header>
+
+    <!-- Name entry screen -->
+    <div id="name-screen" class="overlay">
+      <div class="victory-content">
+        <h2 style="color:var(--accent);margin-bottom:1rem;">What's your name?</h2>
+        <form id="player-name-form" class="sg-form" style="justify-content:center;">
+          <input type="text" id="player-name-input" placeholder="Enter your name..." autocomplete="off" autofocus style="width:220px;">
+          <button type="submit">Play</button>
+        </form>
+      </div>
+    </div>
 
     <div id="main-layout">
       <div id="game-area">

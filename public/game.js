@@ -37,6 +37,7 @@ let cursorCol = Math.floor(BOARD_SIZE / 2);
 let boardFocused = false;
 let typingDir = 'right'; // 'right' or 'down'
 let bossLevel = -1; // -1 = not started, 0 = first encounter, 1-5 = levels
+let playerName = localStorage.getItem('player-name') || '';
 
 // ============================================================
 // Initialization
@@ -857,7 +858,8 @@ function startSentenceGame() {
   sgStreak = 0;
   sgCorrecting = false;
   sgSkillPoints = parseInt(localStorage.getItem('sg-skillpoints') || '0');
-  sgSkillLevel = parseInt(localStorage.getItem('sg-skilllevel') || '0');
+  const totalEarned = parseInt(localStorage.getItem('sg-total-earned') || '0');
+  sgSkillLevel = Math.floor(totalEarned / 100) + 1;
   sgMasteredWords = JSON.parse(localStorage.getItem('sg-mastered') || '[]');
 
   document.getElementById('sentence-game').classList.remove('hidden');
@@ -999,13 +1001,20 @@ document.getElementById('sg-form').addEventListener('submit', (e) => {
     sgSkillPoints += sgCurrentWord.length;
     localStorage.setItem('sg-skillpoints', sgSkillPoints);
 
-    const newLevel = Math.floor(sgSkillPoints / 3);
+    // Track total earned for level calculation
+    let totalEarned = parseInt(localStorage.getItem('sg-total-earned') || '0');
+    totalEarned += sgCurrentWord.length;
+    localStorage.setItem('sg-total-earned', totalEarned);
+
+    const newLevel = Math.floor(totalEarned / 100) + 1;
     if (newLevel > sgSkillLevel) {
       sgSkillLevel = newLevel;
       localStorage.setItem('sg-skilllevel', sgSkillLevel);
       const wrap = document.getElementById('sg-skill-btn');
       wrap.classList.add('sg-skill-levelup');
       setTimeout(() => wrap.classList.remove('sg-skill-levelup'), 1000);
+      // Update name size
+      updatePlayerNameDisplay();
     }
 
     document.getElementById('sg-score').textContent = sgScore;
@@ -1716,5 +1725,35 @@ document.getElementById('dev-skip-final').addEventListener('click', () => {
 // ============================================================
 // Start
 // ============================================================
+
+// ============================================================
+// Player Name + Skill Level System
+// ============================================================
+
+function updatePlayerNameDisplay() {
+  const totalSkillPoints = parseInt(localStorage.getItem('sg-total-earned') || '0');
+  const level = Math.floor(totalSkillPoints / 100) + 1;
+  // Font size: minimum 0.5rem, grows with level, caps at 3rem
+  const fontSize = Math.min(3, 0.3 + level * 0.25);
+  const nameBar = document.getElementById('player-name-bar');
+  nameBar.textContent = playerName;
+  nameBar.style.fontSize = fontSize + 'rem';
+}
+
+document.getElementById('player-name-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = document.getElementById('player-name-input').value.trim();
+  if (!name) return;
+  playerName = name;
+  localStorage.setItem('player-name', name);
+  document.getElementById('name-screen').classList.add('hidden');
+  updatePlayerNameDisplay();
+});
+
+// Check if we already have a name
+if (playerName) {
+  document.getElementById('name-screen').classList.add('hidden');
+  updatePlayerNameDisplay();
+}
 
 init();

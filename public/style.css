@@ -40,6 +40,15 @@ body {
 
 #top-bar h1 { font-size: 1.3rem; color: var(--accent); letter-spacing: 0.02em; }
 
+.player-name-bar {
+  font-weight: 900;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: font-size 0.5s ease;
+  text-shadow: 0 0 10px rgba(233,180,76,0.3);
+}
+
 #game-info {
   display: flex;
   gap: 1.5rem;
