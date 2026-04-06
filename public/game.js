@@ -789,45 +789,9 @@ let sgHintsUsed = 0;
 let sgRevealedLetters = [];
 
 function generateSentence(word, def) {
-  const w = word.toLowerCase();
-  const d = def.toLowerCase();
+  // No sentence — just show the blank. The hints section handles the rest.
   const blank = `<span class="sg-blank">${'_ '.repeat(word.length).trim()}</span>`;
-
-  // Detect part of speech from definition
-  const isVerb = d.startsWith('to ');
-  const isNoun = d.startsWith('a ') || d.startsWith('an ') || d.startsWith('the ');
-  const isAdj = d.includes('pertaining to') || d.includes('resembling') || d.includes('of or relating');
-
-  const templates = isVerb ? [
-    `She wanted to ${blank} but didn't know how.`,
-    `They decided to ${blank} before it was too late.`,
-    `It takes skill to ${blank} properly.`,
-    `He tried to ${blank} every day after school.`,
-    `The instructions said to ${blank} carefully.`,
-    `Learning to ${blank} was harder than expected.`,
-  ] : isNoun ? [
-    `The ${blank} sat on the table untouched.`,
-    `She had never seen a ${blank} like that before.`,
-    `He picked up the ${blank} and examined it closely.`,
-    `Every ${blank} in the collection was unique.`,
-    `The old ${blank} had been there for years.`,
-    `Without the ${blank}, nothing would work.`,
-  ] : isAdj ? [
-    `The ${blank} surface gleamed in the light.`,
-    `It was surprisingly ${blank} for something so old.`,
-    `The room felt ${blank} and still.`,
-    `She described the texture as ${blank}.`,
-    `Nothing about it seemed ${blank} at first glance.`,
-  ] : [
-    `The ${blank} caught everyone's attention.`,
-    `No one expected the ${blank} to matter so much.`,
-    `Something about the ${blank} felt familiar.`,
-    `The old book mentioned ${blank} several times.`,
-    `She wrote the word ${blank} in her notebook.`,
-    `He kept thinking about the ${blank} all day.`,
-  ];
-
-  return templates[Math.floor(Math.random() * templates.length)];
+  return blank;
 }
 
 function startSentenceGame() {
