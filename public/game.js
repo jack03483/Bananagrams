@@ -784,33 +784,69 @@ let sgSkillLevel = 0;
 let sgMasteredWords = JSON.parse(localStorage.getItem('sg-mastered') || '[]');
 let sgDictKeys = [];
 
-// Sentence templates
-const SG_TEMPLATES = [
-  'The word _____ means: ',
-  'A word meaning "DEFHERE" is _____.',
-  '_____ : DEFHERE',
-  'What LETTERCOUNT-letter word means "DEFHERE"?',
-  'Fill in: _____  (DEFHERE)',
-];
+let sgCorrecting = false;
+
+function generateSentence(word, def) {
+  const w = word.toLowerCase();
+  const d = def.toLowerCase();
+  const blank = `<span class="sg-blank">${'_ '.repeat(word.length).trim()}</span>`;
+
+  // Detect part of speech from definition
+  const isVerb = d.startsWith('to ');
+  const isNoun = d.startsWith('a ') || d.startsWith('an ') || d.startsWith('the ');
+  const isAdj = d.includes('pertaining to') || d.includes('resembling') || d.includes('of or relating');
+
+  const templates = isVerb ? [
+    `She wanted to ${blank} but didn't know how.`,
+    `They decided to ${blank} before it was too late.`,
+    `It takes skill to ${blank} properly.`,
+    `He tried to ${blank} every day after school.`,
+    `The instructions said to ${blank} carefully.`,
+    `Learning to ${blank} was harder than expected.`,
+  ] : isNoun ? [
+    `The ${blank} sat on the table untouched.`,
+    `She had never seen a ${blank} like that before.`,
+    `He picked up the ${blank} and examined it closely.`,
+    `Every ${blank} in the collection was unique.`,
+    `The old ${blank} had been there for years.`,
+    `Without the ${blank}, nothing would work.`,
+  ] : isAdj ? [
+    `The ${blank} surface gleamed in the light.`,
+    `It was surprisingly ${blank} for something so old.`,
+    `The room felt ${blank} and still.`,
+    `She described the texture as ${blank}.`,
+    `Nothing about it seemed ${blank} at first glance.`,
+  ] : [
+    `The ${blank} caught everyone's attention.`,
+    `No one expected the ${blank} to matter so much.`,
+    `Something about the ${blank} felt familiar.`,
+    `The old book mentioned ${blank} several times.`,
+    `She wrote the word ${blank} in her notebook.`,
+    `He kept thinking about the ${blank} all day.`,
+  ];
+
+  return templates[Math.floor(Math.random() * templates.length)];
+}
 
 function startSentenceGame() {
   if (!dictionary) return;
   sgDictKeys = Object.keys(dictionary).filter(w => w.length >= 3 && w.length <= 10 && dictionary[w].length > 5);
   sgScore = 0;
   sgStreak = 0;
+  sgCorrecting = false;
   sgSkillPoints = parseInt(localStorage.getItem('sg-skillpoints') || '0');
   sgSkillLevel = parseInt(localStorage.getItem('sg-skilllevel') || '0');
   sgMasteredWords = JSON.parse(localStorage.getItem('sg-mastered') || '[]');
 
   document.getElementById('sentence-game').classList.remove('hidden');
   document.getElementById('sg-score').textContent = '0';
+  document.getElementById('sg-correction-panel').classList.add('hidden');
   updateSkillDisplay();
   document.getElementById('sg-mastered-count').textContent = sgMasteredWords.length;
   nextSentence();
 }
 
 function nextSentence() {
-  // Pick a random word (not mastered)
   const masteredSet = new Set(sgMasteredWords);
   let word, def;
   for (let tries = 0; tries < 50; tries++) {
@@ -819,26 +855,37 @@ function nextSentence() {
   }
   def = dictionary[word];
   sgCurrentWord = word;
+  sgCorrecting = false;
 
-  // Build sentence
-  const templates = [
-    `<span class="sg-blank">${'_ '.repeat(word.length).trim()}</span>`,
-  ];
-  const blank = templates[0];
-
-  document.getElementById('sg-sentence').innerHTML =
-    `Definition: "${def}"<br><br>${blank}`;
-  document.getElementById('sg-hint').textContent = `${word.length} letters`;
+  const sentence = generateSentence(word, def);
+  document.getElementById('sg-sentence').innerHTML = sentence;
+  document.getElementById('sg-hint').innerHTML =
+    `<strong>${word.length} letters</strong> &mdash; ${def}`;
   document.getElementById('sg-feedback').textContent = '';
   document.getElementById('sg-feedback').className = 'sg-feedback';
+  document.getElementById('sg-correction-panel').classList.add('hidden');
   document.getElementById('sg-input').value = '';
+  document.getElementById('sg-input').disabled = false;
   document.getElementById('sg-input').focus();
   document.getElementById('sg-streak').textContent = sgStreak > 0 ? `Streak: ${sgStreak}` : '';
+}
+
+function showCorrectionPanel() {
+  sgCorrecting = true;
+  document.getElementById('sg-input').disabled = true;
+  const panel = document.getElementById('sg-correction-panel');
+  panel.classList.remove('hidden');
+  document.getElementById('sg-correction-word').textContent = sgCurrentWord;
+  document.getElementById('sg-correction-def').textContent = dictionary[sgCurrentWord] || '';
+  const corrInput = document.getElementById('sg-correction-input');
+  corrInput.value = '';
+  corrInput.focus();
 }
 
 // Submit answer
 document.getElementById('sg-form').addEventListener('submit', (e) => {
   e.preventDefault();
+  if (sgCorrecting) return;
   const input = document.getElementById('sg-input');
   const answer = input.value.trim().toUpperCase();
   if (!answer) return;
@@ -851,12 +898,10 @@ document.getElementById('sg-form').addEventListener('submit', (e) => {
     sgSkillPoints++;
     localStorage.setItem('sg-skillpoints', sgSkillPoints);
 
-    // Check level up (every 10 points)
     const newLevel = Math.floor(sgSkillPoints / 10);
     if (newLevel > sgSkillLevel) {
       sgSkillLevel = newLevel;
       localStorage.setItem('sg-skilllevel', sgSkillLevel);
-      // Level up animation
       const wrap = document.getElementById('sg-skill-btn');
       wrap.classList.add('sg-skill-levelup');
       setTimeout(() => wrap.classList.remove('sg-skill-levelup'), 1000);
@@ -865,30 +910,46 @@ document.getElementById('sg-form').addEventListener('submit', (e) => {
     document.getElementById('sg-score').textContent = sgScore;
     updateSkillDisplay();
 
-    fb.textContent = `Correct! "${sgCurrentWord}" — +${sgCurrentWord.length} points`;
+    fb.textContent = `Correct!  +${sgCurrentWord.length} points`;
     fb.className = 'sg-feedback sg-correct';
 
-    setTimeout(() => nextSentence(), 1200);
+    setTimeout(() => nextSentence(), 1000);
   } else {
     sgStreak = 0;
-    fb.textContent = `Incorrect. The word was "${sgCurrentWord}"`;
+    fb.textContent = 'Incorrect.';
     fb.className = 'sg-feedback sg-incorrect';
-    setTimeout(() => nextSentence(), 2000);
+    showCorrectionPanel();
   }
 });
 
-// Spacebar also submits
+// Correction panel — type the word to dismiss
+document.getElementById('sg-correction-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const answer = document.getElementById('sg-correction-input').value.trim().toUpperCase();
+  if (answer === sgCurrentWord) {
+    document.getElementById('sg-correction-panel').classList.add('hidden');
+    sgCorrecting = false;
+    setTimeout(() => nextSentence(), 300);
+  }
+});
+
+document.getElementById('sg-correction-input').addEventListener('keydown', (e) => {
+  if (e.key === ' ') {
+    e.preventDefault();
+    document.getElementById('sg-correction-form').requestSubmit();
+  }
+});
+
+// Spacebar also submits main form
 document.getElementById('sg-input').addEventListener('keydown', (e) => {
   if (e.key === ' ') { e.preventDefault(); document.getElementById('sg-form').requestSubmit(); }
 });
 
 // Skip
 document.getElementById('sg-skip-btn').addEventListener('click', () => {
-  const fb = document.getElementById('sg-feedback');
-  fb.textContent = `Skipped. The word was "${sgCurrentWord}"`;
-  fb.className = 'sg-feedback sg-incorrect';
+  if (sgCorrecting) return;
   sgStreak = 0;
-  setTimeout(() => nextSentence(), 1500);
+  showCorrectionPanel();
 });
 
 function updateSkillDisplay() {

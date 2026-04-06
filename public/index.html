@@ -161,6 +161,18 @@
           </form>
           <div id="sg-feedback" class="sg-feedback"></div>
           <div id="sg-score-display" class="sg-score-display">Score: <strong id="sg-score">0</strong></div>
+
+          <!-- Correction panel — slides up on wrong answer -->
+          <div id="sg-correction-panel" class="sg-correction-panel hidden">
+            <div class="sg-correction-header">Type this word to continue:</div>
+            <div id="sg-correction-word" class="sg-correction-word"></div>
+            <div id="sg-correction-def" class="sg-correction-def"></div>
+            <form id="sg-correction-form" class="sg-form">
+              <input type="text" id="sg-correction-input" placeholder="Type the word..."
+                     autocomplete="off" autocapitalize="off" spellcheck="false">
+              <button type="submit">Continue</button>
+            </form>
+          </div>
         </div>
       </div>
 

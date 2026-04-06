@@ -986,6 +986,49 @@ body {
 .sg-score-display { font-size: 0.9rem; color: var(--text-muted); }
 .sg-score-display strong { color: var(--accent); font-size: 1.1rem; }
 
+/* Correction panel */
+.sg-correction-panel {
+  margin-top: 1.5rem;
+  padding: 1.5rem 2rem;
+  background: rgba(224, 96, 96, 0.08);
+  border: 1px solid rgba(224, 96, 96, 0.25);
+  border-radius: 14px;
+  animation: slideUp 0.3s ease;
+}
+
+.sg-correction-panel.hidden { display: none; }
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sg-correction-header {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.sg-correction-word {
+  font-family: 'Courier New', monospace;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--invalid);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+}
+
+.sg-correction-def {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
 /* Modals */
 .sg-modal {
   position: fixed;
