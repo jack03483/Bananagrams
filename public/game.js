@@ -600,10 +600,18 @@ function updateBossWordSuggestions() {
     if (word.length < bossMinWordLen || word.length > bossLetters.length) continue;
     if (usedSet.has(word)) continue;
     if (canMakeFromBossLetters2(word, available)) results.push(word);
-    if (results.length >= 200) break; // cap for performance
+    if (results.length >= 200) break;
   }
 
   results.sort((a, b) => b.length - a.length || a.localeCompare(b));
+
+  // Auto-add 3 letters if no words can be made
+  if (results.length === 0 && bossLetters.length > 0 && bossPool.length >= 3) {
+    for (let i = 0; i < 3 && bossPool.length > 0; i++) bossLetters.push(bossPool.pop());
+    showBossFeedback('No words possible — 3 letters added!', true);
+    renderBossState();
+    return;
+  }
 
   container.innerHTML = results.map(w =>
     `<span class="boss-suggest-word">${w}</span>`
@@ -745,180 +753,292 @@ function showFinalVictory() {
   }, 4000);
 }
 
-// Click/key on final continue → Word Rain endgame
+// Click/key on final continue → Word Tetris
 document.getElementById('final-continue').addEventListener('click', () => {
   document.getElementById('final-continue').classList.add('hidden');
-  startWordRain();
+  startWordTetris();
 });
 
 // ============================================================
-// ENDGAME: Word Rain — survival mode
+// ENDGAME: Word Tetris
 // ============================================================
-// Words fall from the top. Type them before they reach the bottom.
-// Each word shows its definition. Speed increases. 3 lives.
-// Score = words caught. High score tracked.
+// Letters fall one at a time into a grid. When a horizontal row of
+// adjacent letters forms a valid word, those letters clear and you
+// score points (word length squared). Hold one letter in reserve.
+// Reach 10,000 to win. Grid fills up = game over.
 
-let rainActive = false;
-let rainWords = [];
-let rainScore = 0;
-let rainLives = 3;
-let rainSpeed = 1;
-let rainSpawnInterval = null;
-let rainAnimFrame = null;
-let rainLastFrame = 0;
+const TETRIS_COLS = 10;
+const TETRIS_ROWS = 16;
+const TETRIS_CELL = 36;
+const TETRIS_WIN_SCORE = 10000;
 
-function startWordRain() {
-  if (!dictionary) return;
+let tetrisGrid = [];
+let tetrisActive = false;
+let tetrisFalling = null; // {letter, col, row (float)}
+let tetrisHold = null;
+let tetrisNext = [];
+let tetrisScore = 0;
+let tetrisSpeed = 1;
+let tetrisLastDrop = 0;
+let tetrisAnimFrame = null;
 
-  rainActive = true;
-  rainWords = [];
-  rainScore = 0;
-  rainLives = 3;
-  rainSpeed = 1;
+const TETRIS_LETTERS = 'AAABCDEEEFGHIIIJKLMNOOPQRSTUUVWXYZ';
 
-  const el = document.getElementById('word-rain');
+function randomTetrisLetter() {
+  return TETRIS_LETTERS[Math.floor(Math.random() * TETRIS_LETTERS.length)];
+}
+
+function startWordTetris() {
+  tetrisGrid = [];
+  for (let r = 0; r < TETRIS_ROWS; r++) {
+    tetrisGrid[r] = [];
+    for (let c = 0; c < TETRIS_COLS; c++) tetrisGrid[r][c] = null;
+  }
+
+  tetrisActive = true;
+  tetrisScore = 0;
+  tetrisSpeed = 1;
+  tetrisHold = null;
+  tetrisNext = [randomTetrisLetter(), randomTetrisLetter(), randomTetrisLetter()];
+  tetrisFalling = null;
+
+  const el = document.getElementById('word-tetris');
   el.classList.remove('hidden');
-  document.getElementById('rain-score').textContent = '0';
-  document.getElementById('rain-lives').textContent = '❤️❤️❤️';
-  document.getElementById('rain-input').value = '';
-  document.getElementById('rain-input').focus();
 
-  const canvas = document.getElementById('rain-canvas');
-  canvas.width = canvas.parentElement.clientWidth;
-  canvas.height = canvas.parentElement.clientHeight - 80;
+  const canvas = document.getElementById('tetris-canvas');
+  canvas.width = TETRIS_COLS * TETRIS_CELL;
+  canvas.height = TETRIS_ROWS * TETRIS_CELL;
 
-  // Spawn words periodically
-  rainSpawnInterval = setInterval(() => {
-    if (!rainActive) return;
-    spawnRainWord(canvas);
-  }, Math.max(800, 2500 - rainScore * 30));
+  document.getElementById('tetris-score').textContent = '0';
+  document.getElementById('tetris-speed').textContent = '1';
+  renderTetrisHoldNext();
 
-  spawnRainWord(canvas);
-
-  rainLastFrame = Date.now();
-  rainAnimFrame = requestAnimationFrame(() => rainLoop(canvas));
+  spawnTetrisPiece();
+  tetrisLastDrop = Date.now();
+  tetrisAnimFrame = requestAnimationFrame(tetrisLoop);
 }
 
-function getRandomDictWord() {
-  const keys = Object.keys(dictionary);
-  // Prefer shorter words (3-8 letters)
-  let word;
-  for (let tries = 0; tries < 20; tries++) {
-    word = keys[Math.floor(Math.random() * keys.length)];
-    if (word.length >= 3 && word.length <= 8) break;
+function spawnTetrisPiece() {
+  const letter = tetrisNext.shift();
+  tetrisNext.push(randomTetrisLetter());
+  tetrisFalling = { letter, col: Math.floor(TETRIS_COLS / 2), row: 0 };
+  renderTetrisHoldNext();
+
+  // Check if spawn spot is occupied = game over
+  if (tetrisGrid[0][tetrisFalling.col]) {
+    tetrisActive = false;
+    tetrisGameOver();
   }
-  return word;
 }
 
-function spawnRainWord(canvas) {
-  const word = getRandomDictWord();
-  const def = dictionary[word] || '';
-  const shortDef = def.length > 40 ? def.substring(0, 37) + '...' : def;
-  rainWords.push({
-    word,
-    def: shortDef,
-    x: 40 + Math.random() * (canvas.width - 200),
-    y: -20,
-    speed: (0.3 + Math.random() * 0.3) * rainSpeed
-  });
-}
+function tetrisLoop() {
+  if (!tetrisActive) return;
 
-function rainLoop(canvas) {
-  if (!rainActive) return;
-
-  const ctx = canvas.getContext('2d');
   const now = Date.now();
-  const dt = now - rainLastFrame;
-  rainLastFrame = now;
+  const dropInterval = Math.max(100, 800 - tetrisSpeed * 60);
+
+  if (now - tetrisLastDrop > dropInterval && tetrisFalling) {
+    tetrisFalling.row++;
+    // Check landing
+    if (tetrisFalling.row >= TETRIS_ROWS || tetrisGrid[tetrisFalling.row]?.[tetrisFalling.col]) {
+      tetrisFalling.row--;
+      tetrisGrid[tetrisFalling.row][tetrisFalling.col] = tetrisFalling.letter;
+      tetrisFalling = null;
+      checkTetrisWords();
+      if (tetrisActive) spawnTetrisPiece();
+    }
+    tetrisLastDrop = now;
+  }
+
+  renderTetris();
+  tetrisAnimFrame = requestAnimationFrame(tetrisLoop);
+}
+
+function checkTetrisWords() {
+  let cleared = true;
+  while (cleared) {
+    cleared = false;
+    for (let r = 0; r < TETRIS_ROWS; r++) {
+      // Find all horizontal words in this row
+      let c = 0;
+      while (c < TETRIS_COLS) {
+        if (tetrisGrid[r][c]) {
+          let word = '';
+          let startC = c;
+          while (c < TETRIS_COLS && tetrisGrid[r][c]) {
+            word += tetrisGrid[r][c];
+            c++;
+          }
+          if (word.length >= 2 && isValidWord(word)) {
+            // Clear these cells
+            for (let i = startC; i < startC + word.length; i++) tetrisGrid[r][i] = null;
+            tetrisScore += word.length * word.length;
+            cleared = true;
+          }
+        } else c++;
+      }
+    }
+    if (cleared) applyTetrisGravity();
+  }
+
+  // Update score and speed
+  document.getElementById('tetris-score').textContent = tetrisScore.toLocaleString();
+  tetrisSpeed = Math.floor(tetrisScore / 500) + 1;
+  document.getElementById('tetris-speed').textContent = tetrisSpeed;
+
+  // Check win
+  if (tetrisScore >= TETRIS_WIN_SCORE) {
+    tetrisActive = false;
+    tetrisWin();
+  }
+}
+
+function applyTetrisGravity() {
+  for (let c = 0; c < TETRIS_COLS; c++) {
+    let writeRow = TETRIS_ROWS - 1;
+    for (let r = TETRIS_ROWS - 1; r >= 0; r--) {
+      if (tetrisGrid[r][c]) {
+        tetrisGrid[writeRow][c] = tetrisGrid[r][c];
+        if (writeRow !== r) tetrisGrid[r][c] = null;
+        writeRow--;
+      }
+    }
+    for (let r = writeRow; r >= 0; r--) tetrisGrid[r][c] = null;
+  }
+}
+
+function renderTetris() {
+  const canvas = document.getElementById('tetris-canvas');
+  const ctx = canvas.getContext('2d');
+  const S = TETRIS_CELL;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Update & draw words
-  for (let i = rainWords.length - 1; i >= 0; i--) {
-    const w = rainWords[i];
-    w.y += w.speed * dt * 0.06;
+  // Draw grid
+  for (let r = 0; r < TETRIS_ROWS; r++) {
+    for (let c = 0; c < TETRIS_COLS; c++) {
+      const x = c * S, y = r * S;
+      ctx.fillStyle = '#14141e';
+      ctx.fillRect(x, y, S, S);
+      ctx.strokeStyle = '#1e1e30';
+      ctx.strokeRect(x + 0.5, y + 0.5, S - 1, S - 1);
 
-    // Draw word
-    ctx.font = 'bold 18px "Courier New", monospace';
-    ctx.fillStyle = '#e0e0e0';
-    ctx.fillText(w.word, w.x, w.y);
-
-    // Draw definition below
-    ctx.font = '12px sans-serif';
-    ctx.fillStyle = '#666';
-    ctx.fillText(w.def, w.x, w.y + 16);
-
-    // Hit bottom
-    if (w.y > canvas.height) {
-      rainWords.splice(i, 1);
-      rainLives--;
-      updateRainLives();
-      if (rainLives <= 0) { endWordRain(); return; }
+      if (tetrisGrid[r][c]) {
+        drawTetrisTile(ctx, x, y, S, tetrisGrid[r][c]);
+      }
     }
   }
 
-  // Speed up over time
-  rainSpeed = 1 + rainScore * 0.05;
+  // Draw falling piece
+  if (tetrisFalling) {
+    const x = tetrisFalling.col * S, y = tetrisFalling.row * S;
+    drawTetrisTile(ctx, x, y, S, tetrisFalling.letter);
 
-  // Adjust spawn rate
-  clearInterval(rainSpawnInterval);
-  rainSpawnInterval = setInterval(() => {
-    if (rainActive) spawnRainWord(canvas);
-  }, Math.max(600, 2500 - rainScore * 40));
-
-  rainAnimFrame = requestAnimationFrame(() => rainLoop(canvas));
+    // Ghost (where it will land)
+    let ghostRow = tetrisFalling.row;
+    while (ghostRow + 1 < TETRIS_ROWS && !tetrisGrid[ghostRow + 1]?.[tetrisFalling.col]) ghostRow++;
+    if (ghostRow !== tetrisFalling.row) {
+      ctx.globalAlpha = 0.2;
+      drawTetrisTile(ctx, tetrisFalling.col * S, ghostRow * S, S, tetrisFalling.letter);
+      ctx.globalAlpha = 1;
+    }
+  }
 }
 
-function updateRainLives() {
-  document.getElementById('rain-lives').textContent = '❤️'.repeat(Math.max(0, rainLives));
+function drawTetrisTile(ctx, x, y, s, letter) {
+  const m = 2;
+  ctx.fillStyle = '#f7e8c8';
+  ctx.fillRect(x + m, y + m, s - m * 2, s - m * 2);
+  // Top highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.fillRect(x + m, y + m, s - m * 2, 3);
+  // Bottom shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fillRect(x + m, y + s - m - 3, s - m * 2, 3);
+  // Border
+  ctx.strokeStyle = '#d4b070';
+  ctx.strokeRect(x + m + 0.5, y + m + 0.5, s - m * 2 - 1, s - m * 2 - 1);
+  // Letter
+  ctx.fillStyle = '#2c1810';
+  ctx.font = `bold ${s * 0.5}px Georgia, serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(letter, x + s / 2, y + s / 2 + 1);
 }
 
-// Type to catch words
-document.getElementById('rain-input').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') {
+function renderTetrisHoldNext() {
+  const holdEl = document.getElementById('tetris-hold');
+  holdEl.textContent = tetrisHold || '';
+  if (!tetrisHold) holdEl.textContent = '';
+
+  const nextContainer = document.getElementById('tetris-next');
+  nextContainer.innerHTML = '';
+  tetrisNext.forEach(letter => {
+    const tile = document.createElement('div');
+    tile.className = 'tetris-next-tile';
+    tile.textContent = letter;
+    nextContainer.appendChild(tile);
+  });
+}
+
+// Tetris keyboard controls
+document.addEventListener('keydown', (e) => {
+  if (!tetrisActive || !tetrisFalling) return;
+  const tetrisEl = document.getElementById('word-tetris');
+  if (tetrisEl.classList.contains('hidden')) return;
+
+  if (e.key === 'ArrowLeft') {
     e.preventDefault();
-    const input = document.getElementById('rain-input');
-    const typed = input.value.trim().toUpperCase();
-    input.value = '';
-
-    if (!typed) return;
-
-    // Find matching word
-    const idx = rainWords.findIndex(w => w.word === typed);
-    if (idx !== -1) {
-      rainWords.splice(idx, 1);
-      rainScore++;
-      document.getElementById('rain-score').textContent = rainScore;
+    if (tetrisFalling.col > 0 && !tetrisGrid[tetrisFalling.row]?.[tetrisFalling.col - 1])
+      tetrisFalling.col--;
+  } else if (e.key === 'ArrowRight') {
+    e.preventDefault();
+    if (tetrisFalling.col < TETRIS_COLS - 1 && !tetrisGrid[tetrisFalling.row]?.[tetrisFalling.col + 1])
+      tetrisFalling.col++;
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    // Hard drop
+    while (tetrisFalling.row + 1 < TETRIS_ROWS && !tetrisGrid[tetrisFalling.row + 1]?.[tetrisFalling.col])
+      tetrisFalling.row++;
+    tetrisGrid[tetrisFalling.row][tetrisFalling.col] = tetrisFalling.letter;
+    tetrisFalling = null;
+    checkTetrisWords();
+    if (tetrisActive) spawnTetrisPiece();
+    tetrisLastDrop = Date.now();
+  } else if (e.key === 'Shift') {
+    e.preventDefault();
+    // Hold/swap
+    if (tetrisHold === null) {
+      tetrisHold = tetrisFalling.letter;
+      tetrisFalling = null;
+      renderTetrisHoldNext();
+      spawnTetrisPiece();
+    } else {
+      const temp = tetrisHold;
+      tetrisHold = tetrisFalling.letter;
+      tetrisFalling.letter = temp;
+      tetrisFalling.row = 0;
+      tetrisFalling.col = Math.floor(TETRIS_COLS / 2);
+      renderTetrisHoldNext();
     }
   }
 });
 
-function endWordRain() {
-  rainActive = false;
-  clearInterval(rainSpawnInterval);
-  cancelAnimationFrame(rainAnimFrame);
+function tetrisWin() {
+  cancelAnimationFrame(tetrisAnimFrame);
+  document.getElementById('word-tetris').classList.add('hidden');
+  document.getElementById('tetris-victory').classList.remove('hidden');
+  fireConfetti(12000);
+}
 
-  const canvas = document.getElementById('rain-canvas');
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Show final score
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 48px Georgia, serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(`${rainScore} words`, canvas.width / 2, canvas.height / 2 - 20);
-  ctx.font = '20px sans-serif';
-  ctx.fillStyle = '#888';
-  ctx.fillText('Press Enter to play again', canvas.width / 2, canvas.height / 2 + 30);
-
-  document.getElementById('rain-input').addEventListener('keydown', function retry(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      document.getElementById('rain-input').removeEventListener('keydown', retry);
-      document.getElementById('word-rain').classList.add('hidden');
-      startWordRain();
-    }
-  });
+function tetrisGameOver() {
+  cancelAnimationFrame(tetrisAnimFrame);
+  renderTetris(); // show final state
+  setTimeout(() => {
+    document.getElementById('word-tetris').classList.add('hidden');
+    document.getElementById('tetris-gameover').classList.remove('hidden');
+    document.getElementById('tetris-final-score').textContent = `Score: ${tetrisScore.toLocaleString()}`;
+  }, 1000);
 }
 
 // ============================================================
@@ -985,7 +1105,8 @@ document.addEventListener('keydown', (e) => {
   if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
   // Block if any overlay is open
   const overlays = ['boss-battle', 'victory-screen', 'boss-reveal', 'boss-victory',
-                    'boss-defeat', 'final-victory', 'final-continue', 'word-rain'];
+                    'boss-defeat', 'final-victory', 'final-continue', 'word-tetris',
+                    'tetris-victory', 'tetris-gameover'];
   for (const id of overlays) {
     if (!document.getElementById(id).classList.contains('hidden')) {
       // Boss reveal: any key continues
@@ -993,7 +1114,7 @@ document.addEventListener('keydown', (e) => {
       // Final continue: any key continues
       if (id === 'final-continue') {
         document.getElementById('final-continue').classList.add('hidden');
-        startWordRain();
+        startWordTetris();
       }
       return;
     }
@@ -1052,9 +1173,13 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-// DEV: Skip to boss (remove before push)
+// DEV buttons (remove before push)
 // ============================================================
 document.getElementById('dev-skip-btn').addEventListener('click', () => showVictoryScreen());
+document.getElementById('dev-skip-final').addEventListener('click', () => {
+  bossLevel = 5;
+  showFinalVictory();
+});
 
 // ============================================================
 // Start
