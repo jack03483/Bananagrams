@@ -290,14 +290,20 @@ function scheduleValidation() {
 function validateBoard() {
   const words = findBoardWords();
   const cells = document.querySelectorAll('.cell');
-  cells.forEach(c => c.classList.remove('valid-word', 'invalid-word'));
+  cells.forEach(c => c.classList.remove('valid-word', 'invalid-word', 'mastered-word'));
+
+  const masteredSet = new Set(JSON.parse(localStorage.getItem('sg-mastered') || '[]'));
 
   let allValid = true, hasWords = false;
   for (const w of words) {
     hasWords = true;
     const valid = isValidWord(w.word);
     if (!valid) allValid = false;
-    for (const pos of w.cells) cells[pos.row * BOARD_SIZE + pos.col].classList.add(valid ? 'valid-word' : 'invalid-word');
+    const mastered = masteredSet.has(w.word);
+    for (const pos of w.cells) {
+      const cls = mastered ? 'mastered-word' : (valid ? 'valid-word' : 'invalid-word');
+      cells[pos.row * BOARD_SIZE + pos.col].classList.add(cls);
+    }
   }
 
   const tilesOnBoard = [];
