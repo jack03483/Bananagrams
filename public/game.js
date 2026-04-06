@@ -1002,12 +1002,15 @@ function buildBlankDisplay(word, revealed) {
 
 function nextSentence() {
   const masteredSet = new Set(sgMasteredWords);
-  let word, def;
-  for (let tries = 0; tries < 50; tries++) {
-    word = sgDictKeys[Math.floor(Math.random() * sgDictKeys.length)];
-    if (!masteredSet.has(word)) break;
+  // Filter to only unmastered words
+  const available = sgDictKeys.filter(w => !masteredSet.has(w));
+  if (available.length === 0) {
+    // All words mastered — just pick any
+    document.getElementById('sg-streak').textContent = 'All available words mastered!';
+    return;
   }
-  def = dictionary[word];
+  const word = available[Math.floor(Math.random() * available.length)];
+  const def = dictionary[word];
   sgCurrentWord = word;
   sgCorrecting = false;
   sgProcessing = false;
@@ -1275,42 +1278,85 @@ document.getElementById('sg-search-close').addEventListener('click', () => {
   document.getElementById('sg-search-modal').classList.add('hidden');
 });
 
-// Enter in search = master the word if valid and has points
+// Enter = master typed word, Shift+Enter = master all related words
 document.getElementById('sg-search-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
     const word = document.getElementById('sg-search-input').value.trim().toUpperCase();
-    if (word && word in dictionary && sgSkillPoints > 0 && !sgMasteredWords.includes(word)) {
-      masterWord(word);
+
+    if (e.shiftKey && searchRelatedWords.length > 0) {
+      // Master the typed word + all related
+      const toMaster = [];
+      if (word && word in dictionary && !sgMasteredWords.includes(word)) toMaster.push(word);
+      for (const w of searchRelatedWords) {
+        if (!sgMasteredWords.includes(w)) toMaster.push(w);
+      }
+      let mastered = 0;
+      for (const w of toMaster) {
+        if (sgSkillPoints <= 0) break;
+        masterWord(w);
+        mastered++;
+      }
       document.getElementById('sg-search-input').value = '';
-      // Re-show suggestions
       refreshSearchSuggestions();
+    } else {
+      // Master just the typed word
+      if (word && word in dictionary && sgSkillPoints > 0 && !sgMasteredWords.includes(word)) {
+        masterWord(word);
+        document.getElementById('sg-search-input').value = '';
+        refreshSearchSuggestions();
+      }
     }
   }
 });
 
+let searchRelatedWords = [];
+
 document.getElementById('sg-search-input').addEventListener('input', () => {
   const word = document.getElementById('sg-search-input').value.trim().toUpperCase();
   const resultEl = document.getElementById('sg-search-result');
+  searchRelatedWords = [];
 
   if (!word || word.length < 2) { resultEl.innerHTML = ''; return; }
+
+  let html = '';
 
   if (word in dictionary) {
     const def = dictionary[word];
     const alreadyMastered = sgMasteredWords.includes(word);
-    resultEl.innerHTML = `
-      <div class="sg-search-word">${word}</div>
-      <div class="sg-search-def">${def}</div>
-      ${alreadyMastered
-        ? '<div style="color:#9b59b6;font-weight:600;margin-top:0.5rem;">Already mastered</div>'
-        : sgSkillPoints > 0
-          ? `<button class="sg-master-word-btn" onclick="masterWord('${word}')">Master this word (1 skill point)</button>`
-          : '<div style="color:var(--text-muted);margin-top:0.5rem;">Need skill points to master words</div>'
-      }
-    `;
+    html += `<div class="sg-search-word">${word}</div>`;
+    html += `<div class="sg-search-def">${def}</div>`;
+    if (alreadyMastered) {
+      html += '<div style="color:#9b59b6;font-weight:600;margin-top:0.5rem;">Already mastered</div>';
+    } else if (sgSkillPoints > 0) {
+      html += `<button class="sg-master-word-btn" onclick="masterWord('${word}')">Master this word (1 point)</button>`;
+    }
   } else {
-    resultEl.innerHTML = '<div style="color:var(--text-muted)">Not in dictionary</div>';
+    html += '<div style="color:var(--text-muted)">Not in dictionary</div>';
   }
+
+  // Find related words (starts with the typed text)
+  const related = [];
+  const masteredSet = new Set(sgMasteredWords);
+  for (const w of Object.keys(dictionary)) {
+    if (w === word) continue;
+    if (w.startsWith(word) || (word.length >= 3 && w.startsWith(word.slice(0, -1)))) {
+      if (!masteredSet.has(w)) related.push(w);
+    }
+    if (related.length >= 20) break;
+  }
+
+  if (related.length > 0) {
+    searchRelatedWords = related;
+    html += '<div style="margin-top:1rem;font-size:0.75rem;color:var(--text-muted);">Related words (Shift+Enter to master all):</div>';
+    html += '<div class="sg-search-suggest-grid" style="margin-top:0.3rem;">';
+    related.forEach(w => {
+      html += `<button class="sg-suggest-chip" onclick="document.getElementById('sg-search-input').value='${w}';document.getElementById('sg-search-input').dispatchEvent(new Event('input'))">${w.toLowerCase()}</button>`;
+    });
+    html += '</div>';
+  }
+
+  resultEl.innerHTML = html;
 });
 
 function masterWord(word) {
