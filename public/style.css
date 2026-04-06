@@ -1086,6 +1086,24 @@ body {
   color: #2ecc71;
 }
 
+.sg-master-selected-btn {
+  display: block;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.7rem;
+  background: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sg-master-selected-btn:hover { background: #2ecc71; }
+.sg-master-selected-btn.hidden { display: none; }
+
 .sg-mastered-btn {
   padding: 0.35rem 0.75rem;
   background: rgba(142, 68, 173, 0.15);

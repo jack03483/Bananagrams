@@ -1274,28 +1274,50 @@ function toggleSearchSelect(btn, word) {
     searchSelectedWords.add(word);
     btn.classList.add('sg-chip-selected');
   }
+  updateMasterSelectedBtn();
 }
 
-// Enter = master typed word + all selected related words
+function updateMasterSelectedBtn() {
+  const btn = document.getElementById('sg-master-selected-btn');
+  const count = searchSelectedWords.size;
+  if (count > 0) {
+    btn.textContent = `Master Selected (${count} word${count !== 1 ? 's' : ''} — ${count} point${count !== 1 ? 's' : ''})`;
+    btn.classList.remove('hidden');
+  } else {
+    btn.classList.add('hidden');
+  }
+}
+
+document.getElementById('sg-master-selected-btn').addEventListener('click', () => {
+  masterSelectedWords();
+});
+
+function masterSelectedWords() {
+  const word = document.getElementById('sg-search-input').value.trim().toUpperCase();
+
+  // Master typed word if valid
+  if (word && word in dictionary && sgSkillPoints > 0 && !sgMasteredWords.includes(word)) {
+    masterWord(word);
+  }
+
+  // Master all selected
+  for (const w of searchSelectedWords) {
+    if (sgSkillPoints <= 0) break;
+    if (!sgMasteredWords.includes(w)) masterWord(w);
+  }
+
+  searchSelectedWords = new Set();
+  updateMasterSelectedBtn();
+  document.getElementById('sg-search-input').value = '';
+  document.getElementById('sg-search-input').dispatchEvent(new Event('input'));
+  refreshSearchSuggestions();
+}
+
+// Enter in search = master typed word + selected
 document.getElementById('sg-search-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
-    const word = document.getElementById('sg-search-input').value.trim().toUpperCase();
-
-    // Master the typed word if valid
-    if (word && word in dictionary && sgSkillPoints > 0 && !sgMasteredWords.includes(word)) {
-      masterWord(word);
-    }
-
-    // Master all selected related words
-    for (const w of searchSelectedWords) {
-      if (sgSkillPoints <= 0) break;
-      if (!sgMasteredWords.includes(w)) masterWord(w);
-    }
-
-    searchSelectedWords = new Set();
-    document.getElementById('sg-search-input').value = '';
-    refreshSearchSuggestions();
+    masterSelectedWords();
   }
 });
 
