@@ -1080,6 +1080,12 @@ body {
   border-color: var(--accent);
 }
 
+.sg-suggest-chip.sg-chip-selected {
+  background: rgba(46, 204, 113, 0.25);
+  border-color: #2ecc71;
+  color: #2ecc71;
+}
+
 .sg-mastered-btn {
   padding: 0.35rem 0.75rem;
   background: rgba(142, 68, 173, 0.15);

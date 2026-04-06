@@ -1266,44 +1266,45 @@ document.getElementById('sg-search-close').addEventListener('click', () => {
   document.getElementById('sg-search-modal').classList.add('hidden');
 });
 
-// Enter = master typed word, Shift+Enter = master all related words
+function toggleSearchSelect(btn, word) {
+  if (searchSelectedWords.has(word)) {
+    searchSelectedWords.delete(word);
+    btn.classList.remove('sg-chip-selected');
+  } else {
+    searchSelectedWords.add(word);
+    btn.classList.add('sg-chip-selected');
+  }
+}
+
+// Enter = master typed word + all selected related words
 document.getElementById('sg-search-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
     const word = document.getElementById('sg-search-input').value.trim().toUpperCase();
 
-    if (e.shiftKey && searchRelatedWords.length > 0) {
-      // Master the typed word + all related
-      const toMaster = [];
-      if (word && word in dictionary && !sgMasteredWords.includes(word)) toMaster.push(word);
-      for (const w of searchRelatedWords) {
-        if (!sgMasteredWords.includes(w)) toMaster.push(w);
-      }
-      let mastered = 0;
-      for (const w of toMaster) {
-        if (sgSkillPoints <= 0) break;
-        masterWord(w);
-        mastered++;
-      }
-      document.getElementById('sg-search-input').value = '';
-      refreshSearchSuggestions();
-    } else {
-      // Master just the typed word
-      if (word && word in dictionary && sgSkillPoints > 0 && !sgMasteredWords.includes(word)) {
-        masterWord(word);
-        document.getElementById('sg-search-input').value = '';
-        refreshSearchSuggestions();
-      }
+    // Master the typed word if valid
+    if (word && word in dictionary && sgSkillPoints > 0 && !sgMasteredWords.includes(word)) {
+      masterWord(word);
     }
+
+    // Master all selected related words
+    for (const w of searchSelectedWords) {
+      if (sgSkillPoints <= 0) break;
+      if (!sgMasteredWords.includes(w)) masterWord(w);
+    }
+
+    searchSelectedWords = new Set();
+    document.getElementById('sg-search-input').value = '';
+    refreshSearchSuggestions();
   }
 });
 
-let searchRelatedWords = [];
+let searchSelectedWords = new Set();
 
 document.getElementById('sg-search-input').addEventListener('input', () => {
   const word = document.getElementById('sg-search-input').value.trim().toUpperCase();
   const resultEl = document.getElementById('sg-search-result');
-  searchRelatedWords = [];
+  searchSelectedWords = new Set();
 
   if (!word || word.length < 2) { resultEl.innerHTML = ''; return; }
 
@@ -1317,13 +1318,13 @@ document.getElementById('sg-search-input').addEventListener('input', () => {
     if (alreadyMastered) {
       html += '<div style="color:#9b59b6;font-weight:600;margin-top:0.5rem;">Already mastered</div>';
     } else if (sgSkillPoints > 0) {
-      html += `<button class="sg-master-word-btn" onclick="masterWord('${word}')">Master this word (1 point)</button>`;
+      html += `<button class="sg-master-word-btn" onclick="masterWord('${word}');document.getElementById('sg-search-input').dispatchEvent(new Event('input'))">Master this word (1 point)</button>`;
     }
   } else {
     html += '<div style="color:var(--text-muted)">Not in dictionary</div>';
   }
 
-  // Find related words (starts with the typed text)
+  // Find related words
   const related = [];
   const masteredSet = new Set(sgMasteredWords);
   for (const w of Object.keys(dictionary)) {
@@ -1331,15 +1332,14 @@ document.getElementById('sg-search-input').addEventListener('input', () => {
     if (w.startsWith(word) || (word.length >= 3 && w.startsWith(word.slice(0, -1)))) {
       if (!masteredSet.has(w)) related.push(w);
     }
-    if (related.length >= 20) break;
+    if (related.length >= 30) break;
   }
 
   if (related.length > 0) {
-    searchRelatedWords = related;
-    html += '<div style="margin-top:1rem;font-size:0.75rem;color:var(--text-muted);">Related words (Shift+Enter to master all):</div>';
-    html += '<div class="sg-search-suggest-grid" style="margin-top:0.3rem;">';
+    html += '<div style="margin-top:1rem;font-size:0.75rem;color:var(--text-muted);">Click to select, Enter to master selected:</div>';
+    html += '<div class="sg-search-suggest-grid" id="sg-related-grid" style="margin-top:0.3rem;">';
     related.forEach(w => {
-      html += `<button class="sg-suggest-chip" onclick="document.getElementById('sg-search-input').value='${w}';document.getElementById('sg-search-input').dispatchEvent(new Event('input'))">${w.toLowerCase()}</button>`;
+      html += `<button class="sg-suggest-chip" data-word="${w}" onclick="toggleSearchSelect(this,'${w}')">${w.toLowerCase()}</button>`;
     });
     html += '</div>';
   }
@@ -1964,7 +1964,7 @@ document.getElementById('dev-skip-49').addEventListener('click', () => {
   // Set to 49 after a tick so the game initializes first
   setTimeout(() => {
     sgWordsAttempted = 49;
-    sgWordsCorrect = 45;
+    sgWordsCorrect = 0;
     document.getElementById('sg-score').textContent = `49 / ${SG_TOTAL_WORDS}`;
   }, 100);
 });
