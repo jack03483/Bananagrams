@@ -545,7 +545,7 @@ body {
 }
 
 /* Victory screen */
-#victory-screen { background: rgba(0,0,0,0.85); }
+#victory-screen { background: #000; }
 
 .victory-content {
   text-align: center;
@@ -641,7 +641,7 @@ body {
 /* Boss Battle                                                    */
 /* ============================================================ */
 
-#boss-battle { background: rgba(0,0,0,0.95); }
+#boss-battle { background: #000; }
 
 .boss-battle-content {
   width: 100%;
@@ -882,7 +882,7 @@ body {
   margin-bottom: 1rem;
 }
 
-#boss-victory, #boss-defeat { background: rgba(0,0,0,0.9); }
+#boss-victory, #boss-defeat { background: #000; }
 .boss-lose { animation: shake 0.5s ease; }
 
 /* Boss level display */
