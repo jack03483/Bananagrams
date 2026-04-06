@@ -290,7 +290,7 @@ function scheduleValidation() {
 function validateBoard() {
   const words = findBoardWords();
   const cells = document.querySelectorAll('.cell');
-  cells.forEach(c => c.classList.remove('valid-word', 'invalid-word', 'mastered-word'));
+  cells.forEach(c => c.classList.remove('valid-word', 'invalid-word', 'mastered-word', 'disconnected-word'));
 
   const masteredSet = new Set(JSON.parse(localStorage.getItem('sg-mastered') || '[]'));
 
@@ -302,22 +302,31 @@ function validateBoard() {
   const connected = tilesOnBoard.length > 0 ? checkConnectivity(tilesOnBoard) : true;
   const noFloating = tilesOnBoard.every(t => isPartOfWord(t.r, t.c));
 
-  // Determine which cells are in the main connected group
+  // Find the LARGEST connected group of tiles
   let connectedCells = new Set();
   if (tilesOnBoard.length > 0) {
     const key = (r, c) => `${r},${c}`;
     const tileSet = new Set(tilesOnBoard.map(t => key(t.r, t.c)));
-    const visited = new Set();
-    const queue = [tilesOnBoard[0]];
-    visited.add(key(tilesOnBoard[0].r, tilesOnBoard[0].c));
-    while (queue.length > 0) {
-      const { r, c } = queue.shift();
-      for (const n of [{ r: r-1, c }, { r: r+1, c }, { r, c: c-1 }, { r, c: c+1 }]) {
-        const k = key(n.r, n.c);
-        if (tileSet.has(k) && !visited.has(k)) { visited.add(k); queue.push(n); }
+    const globalVisited = new Set();
+    let largestGroup = new Set();
+
+    for (const start of tilesOnBoard) {
+      const sk = key(start.r, start.c);
+      if (globalVisited.has(sk)) continue;
+      const visited = new Set();
+      const queue = [start];
+      visited.add(sk);
+      while (queue.length > 0) {
+        const { r, c } = queue.shift();
+        for (const n of [{ r: r-1, c }, { r: r+1, c }, { r, c: c-1 }, { r, c: c+1 }]) {
+          const k = key(n.r, n.c);
+          if (tileSet.has(k) && !visited.has(k)) { visited.add(k); queue.push(n); }
+        }
       }
+      visited.forEach(k => globalVisited.add(k));
+      if (visited.size > largestGroup.size) largestGroup = visited;
     }
-    connectedCells = visited;
+    connectedCells = largestGroup;
   }
 
   let allValid = true, hasWords = false;
@@ -333,11 +342,10 @@ function validateBoard() {
     let status, cls;
     if (!valid) { status = 'invalid'; cls = 'invalid-word'; }
     else if (mastered) { status = 'mastered'; cls = 'mastered-word'; }
-    else if (!wordConnected) { status = 'disconnected'; cls = 'valid-word'; }
+    else if (!wordConnected) { status = 'disconnected'; cls = 'disconnected-word'; }
     else { status = 'valid'; cls = 'valid-word'; }
 
     for (const pos of w.cells) cells[pos.row * BOARD_SIZE + pos.col].classList.add(cls);
-    if (mastered) for (const pos of w.cells) cells[pos.row * BOARD_SIZE + pos.col].classList.add('mastered-word');
 
     wordStatuses.push({ word: w.word, status });
   }
@@ -345,12 +353,16 @@ function validateBoard() {
   // Update word status panel
   const panel = document.getElementById('word-status-panel');
   const seen = new Set();
-  let panelHtml = '';
+  let panelHtml = '<div class="ws-legend"><span class="ws-valid">valid</span> <span class="ws-invalid">invalid</span> <span class="ws-disconnected">disconnected</span> <span class="ws-mastered">mastered</span></div>';
   for (const ws of wordStatuses) {
     if (seen.has(ws.word)) continue;
     seen.add(ws.word);
     const cssClass = 'ws-' + ws.status;
-    panelHtml += `<div class="ws-word ${cssClass}">${ws.word.toLowerCase()}</div>`;
+    const def = (ws.status !== 'invalid' && dictionary) ? (dictionary[ws.word] || '') : '';
+    const shortDef = def.length > 40 ? def.substring(0, 37) + '...' : def;
+    panelHtml += `<div class="ws-entry ${cssClass}"><div class="ws-word">${ws.word.toLowerCase()}</div>`;
+    if (shortDef) panelHtml += `<div class="ws-def">${shortDef}</div>`;
+    panelHtml += `</div>`;
   }
   panel.innerHTML = panelHtml;
   const rackEmpty = rack.length === 0;
