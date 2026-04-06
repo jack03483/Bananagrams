@@ -32,6 +32,7 @@ let dictionary = null;
 let suggestionTimeout = null;
 let validationTimeout = null;
 let peelCooldown = false;
+let lastValidWords = new Set();
 let cursorRow = Math.floor(BOARD_SIZE / 2);
 let cursorCol = Math.floor(BOARD_SIZE / 2);
 let boardFocused = false;
@@ -95,6 +96,53 @@ async function loadDictionary() {
   } catch (err) {
     document.getElementById('word-count-label').textContent = 'Error loading dictionary';
   }
+}
+
+// ============================================================
+// Sound Effects (Web Audio API — no files needed)
+// ============================================================
+
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playWordSound() {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(523, ctx.currentTime);       // C5
+    osc.frequency.setValueAtTime(659, ctx.currentTime + 0.08); // E5
+    osc.frequency.setValueAtTime(784, ctx.currentTime + 0.16); // G5
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.35);
+  } catch (e) {}
+}
+
+function playCorrectSound() {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, ctx.currentTime);
+    osc.frequency.setValueAtTime(554, ctx.currentTime + 0.1);
+    osc.frequency.setValueAtTime(659, ctx.currentTime + 0.2);
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch (e) {}
 }
 
 function isValidWord(word) {
@@ -371,6 +419,14 @@ function validateBoard() {
     panelHtml += `</div>`;
   }
   panel.innerHTML = panelHtml;
+
+  // Play sound when a new valid word appears on the board
+  const currentValidWords = new Set(wordStatuses.filter(ws => ws.status === 'valid' || ws.status === 'mastered').map(ws => ws.word));
+  for (const w of currentValidWords) {
+    if (!lastValidWords.has(w)) { playWordSound(); break; }
+  }
+  lastValidWords = currentValidWords;
+
   const rackEmpty = rack.length === 0;
 
   // Mark floating tiles (single letters not part of any word) as invalid
@@ -735,6 +791,7 @@ function bossSubmitWord() {
     bossHp = Math.max(0, bossHp - word.length);
     bossUsedWords.push({ word, valid: true });
     showBossFeedback(`${word} — ${word.length} damage!`, true);
+    playWordSound();
   } else if (valid && canMake && word.length < bossMinWordLen) {
     playerBossHp = Math.max(0, playerBossHp - word.length);
     bossUsedWords.push({ word, valid: false });
@@ -1066,6 +1123,7 @@ document.getElementById('sg-form').addEventListener('submit', (e) => {
     updateSkillDisplay();
 
     document.getElementById('sg-input').disabled = true;
+    playCorrectSound();
     fb.textContent = `Correct!  +${sgCurrentWord.length} points`;
     fb.className = 'sg-feedback sg-correct';
 
@@ -1636,6 +1694,17 @@ function updateWordSuggestions() {
     if (canMakeWord(word, available)) results.push({ word, definition: dictionary[word], length: word.length });
   }
   results.sort((a, b) => b.length - a.length || a.word.localeCompare(b.word));
+
+  // Auto-add 3 letters if no words can be made from rack
+  if (results.length === 0 && allLetters.length > 0 && pool.length >= 3) {
+    for (let i = 0; i < 3 && pool.length > 0; i++) rack.push(pool.pop());
+    updateCounts();
+    renderRack();
+    showStatus('No words possible — 3 tiles added', 'var(--accent)');
+    scheduleWordSuggestions(); // re-check with new letters
+    return;
+  }
+
   renderWordSuggestions(results);
 }
 
