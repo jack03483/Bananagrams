@@ -611,6 +611,7 @@ function showVictoryScreen() {
     vs.style.transition = 'opacity 1.5s ease'; vs.style.opacity = '0';
     setTimeout(() => {
       vs.classList.add('hidden'); vs.style.opacity = ''; vs.style.transition = '';
+      setHeaderMode('hidden');
       document.getElementById('boss-reveal').classList.remove('hidden');
     }, 1500);
   }, 3000);
@@ -878,7 +879,7 @@ function bossVictory() {
     function goSentence() {
       bv.classList.add('hidden');
       document.removeEventListener('keydown', bvKey);
-      // Show continue image then sentence game
+      setHeaderMode('hidden');
       document.getElementById('final-continue').classList.remove('hidden');
     }
     document.getElementById('boss-next-action').onclick = goSentence;
@@ -1920,7 +1921,8 @@ document.addEventListener('keydown', (e) => {
 document.getElementById('dev-skip-btn').addEventListener('click', () => showVictoryScreen());
 document.getElementById('dev-skip-sentence').addEventListener('click', () => {
   bossLevel = 5;
-  startSentenceGame();
+  setHeaderMode('hidden');
+  document.getElementById('final-continue').classList.remove('hidden');
 });
 document.getElementById('dev-skip-49').addEventListener('click', () => {
   bossLevel = 5;
