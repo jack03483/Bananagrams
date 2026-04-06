@@ -867,6 +867,7 @@ let sgMasteredWords = JSON.parse(localStorage.getItem('sg-mastered') || '[]');
 let sgDictKeys = [];
 
 let sgCorrecting = false;
+let sgProcessing = false;
 let sgHintsUsed = 0;
 let sgRevealedLetters = [];
 
@@ -917,6 +918,7 @@ function nextSentence() {
   def = dictionary[word];
   sgCurrentWord = word;
   sgCorrecting = false;
+  sgProcessing = false;
   sgHintsUsed = 0;
 
   // Start with first letter revealed
@@ -1025,7 +1027,8 @@ document.getElementById('sg-form').addEventListener('submit', (e) => {
   }
 
   // Prevent double-submit while transitioning
-  if (document.getElementById('sg-input').disabled) return;
+  if (sgCorrecting || document.getElementById('sg-input').disabled || sgProcessing) return;
+  sgProcessing = true;
 
   const fb = document.getElementById('sg-feedback');
 
