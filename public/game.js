@@ -581,6 +581,42 @@ function renderBossState() {
     tag.textContent = w.word + (w.valid ? ' +' + w.word.length : ' -' + w.word.length);
     usedContainer.appendChild(tag);
   });
+
+  // Word suggestions from available letters
+  updateBossWordSuggestions();
+}
+
+function updateBossWordSuggestions() {
+  if (!dictionary) return;
+  const container = document.getElementById('boss-word-list');
+
+  const available = {};
+  bossLetters.forEach(l => { available[l] = (available[l] || 0) + 1; });
+
+  const usedSet = new Set(bossUsedWords.filter(w => w.valid).map(w => w.word));
+  const results = [];
+
+  for (const word of Object.keys(dictionary)) {
+    if (word.length < bossMinWordLen || word.length > bossLetters.length) continue;
+    if (usedSet.has(word)) continue;
+    if (canMakeFromBossLetters2(word, available)) results.push(word);
+    if (results.length >= 200) break; // cap for performance
+  }
+
+  results.sort((a, b) => b.length - a.length || a.localeCompare(b));
+
+  container.innerHTML = results.map(w =>
+    `<span class="boss-suggest-word">${w}</span>`
+  ).join('');
+}
+
+function canMakeFromBossLetters2(word, available) {
+  const needed = {};
+  for (const ch of word) {
+    needed[ch] = (needed[ch] || 0) + 1;
+    if (needed[ch] > (available[ch] || 0)) return false;
+  }
+  return true;
 }
 
 function bossSubmitWord() {
