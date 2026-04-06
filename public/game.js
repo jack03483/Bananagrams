@@ -1012,8 +1012,20 @@ function nextSentence() {
   sgProcessing = false;
   sgHintsUsed = 0;
 
-  // Start with first letter revealed
-  sgRevealedLetters = [0];
+  // Reveal all but 2 letters — player only needs to figure out 2 blanks
+  sgRevealedLetters = [];
+  const indices = Array.from({ length: word.length }, (_, i) => i);
+  // Shuffle indices
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  // Reveal all except 2 random positions
+  const blanksCount = Math.min(2, word.length - 1);
+  const hiddenSet = new Set(indices.slice(0, blanksCount));
+  for (let i = 0; i < word.length; i++) {
+    if (!hiddenSet.has(i)) sgRevealedLetters.push(i);
+  }
 
   const sentence = generateSentence(word, def);
   document.getElementById('sg-sentence').innerHTML = sentence;
@@ -1906,13 +1918,19 @@ document.addEventListener('keydown', (e) => {
 // DEV buttons (remove before final push)
 // ============================================================
 document.getElementById('dev-skip-btn').addEventListener('click', () => showVictoryScreen());
-document.getElementById('dev-skip-final').addEventListener('click', () => {
-  bossLevel = 5;
-  document.getElementById('final-continue').classList.remove('hidden');
-});
 document.getElementById('dev-skip-sentence').addEventListener('click', () => {
   bossLevel = 5;
   startSentenceGame();
+});
+document.getElementById('dev-skip-49').addEventListener('click', () => {
+  bossLevel = 5;
+  startSentenceGame();
+  // Set to 49 after a tick so the game initializes first
+  setTimeout(() => {
+    sgWordsAttempted = 49;
+    sgWordsCorrect = 45;
+    document.getElementById('sg-score').textContent = `49 / ${SG_TOTAL_WORDS}`;
+  }, 100);
 });
 
 // ============================================================
