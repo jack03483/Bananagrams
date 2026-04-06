@@ -1279,9 +1279,11 @@ function toggleSearchSelect(btn, word) {
 
 function updateMasterSelectedBtn() {
   const btn = document.getElementById('sg-master-selected-btn');
-  const count = searchSelectedWords.size;
+  const typed = document.getElementById('sg-search-input').value.trim().toUpperCase();
+  const typedValid = typed && typed in dictionary && !sgMasteredWords.includes(typed);
+  const count = searchSelectedWords.size + (typedValid ? 1 : 0);
   if (count > 0) {
-    btn.textContent = `Master Selected (${count} word${count !== 1 ? 's' : ''} — ${count} point${count !== 1 ? 's' : ''})`;
+    btn.textContent = `Master ${count} word${count !== 1 ? 's' : ''} (${count} point${count !== 1 ? 's' : ''})`;
     btn.classList.remove('hidden');
   } else {
     btn.classList.add('hidden');
@@ -1367,6 +1369,7 @@ document.getElementById('sg-search-input').addEventListener('input', () => {
   }
 
   resultEl.innerHTML = html;
+  updateMasterSelectedBtn();
 });
 
 function masterWord(word) {
@@ -1972,26 +1975,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-// DEV buttons (remove before final push)
-// ============================================================
-document.getElementById('dev-skip-btn').addEventListener('click', () => showVictoryScreen());
-document.getElementById('dev-skip-sentence').addEventListener('click', () => {
-  bossLevel = 5;
-  setHeaderMode('hidden');
-  document.getElementById('final-continue').classList.remove('hidden');
-});
-document.getElementById('dev-skip-49').addEventListener('click', () => {
-  bossLevel = 5;
-  startSentenceGame();
-  // Set to 49 after a tick so the game initializes first
-  setTimeout(() => {
-    sgWordsAttempted = 49;
-    sgWordsCorrect = 0;
-    document.getElementById('sg-score').textContent = `49 / ${SG_TOTAL_WORDS}`;
-  }, 100);
-});
-
-// ============================================================
 // Start
 // ============================================================
 
@@ -2035,6 +2018,8 @@ if (playerName) {
 // Initialize skill display on load
 sgSkillPoints = parseInt(localStorage.getItem('sg-skillpoints') || '0');
 sgSkillLevel = Math.floor(parseInt(localStorage.getItem('sg-total-earned') || '0') / 100) + 1;
+sgMasteredWords = JSON.parse(localStorage.getItem('sg-mastered') || '[]');
+document.getElementById('sg-mastered-count').textContent = sgMasteredWords.length;
 updateSkillDisplay();
 
 init();

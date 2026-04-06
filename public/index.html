@@ -17,11 +17,14 @@
         <span id="pool-count">Pool: 129</span>
         <span id="status-msg"></span>
       </div>
-      <div class="sg-skill-bar-wrap" id="sg-skill-btn" title="Click to search & master words">
-        <div class="sg-skill-label">SKILL <span id="sg-skill-level">1</span></div>
-        <div class="sg-skill-bar"><div id="sg-skill-fill" class="sg-skill-fill"></div></div>
-        <span id="sg-skill-badge" class="sg-skill-badge hidden">+0</span>
-        <div id="sg-unspent-text" class="sg-unspent-text"></div>
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <button id="sg-mastered-btn" class="sg-mastered-btn">Mastered (<span id="sg-mastered-count">0</span>)</button>
+        <div class="sg-skill-bar-wrap" id="sg-skill-btn" title="Click to search & master words">
+          <div class="sg-skill-label">SKILL <span id="sg-skill-level">1</span></div>
+          <div class="sg-skill-bar"><div id="sg-skill-fill" class="sg-skill-fill"></div></div>
+          <span id="sg-skill-badge" class="sg-skill-badge hidden">+0</span>
+          <div id="sg-unspent-text" class="sg-unspent-text"></div>
+        </div>
       </div>
     </header>
 
@@ -54,13 +57,6 @@
           <div id="rack"></div>
         </div>
       </div>
-    </div>
-
-    <!-- DEV buttons (remove before final push) -->
-    <div style="position:fixed;bottom:10px;left:10px;z-index:9999;display:flex;gap:6px;">
-      <button id="dev-skip-btn" style="padding:4px 10px;background:#440000;color:#aa4444;border:1px solid #660000;border-radius:4px;font-size:0.65rem;cursor:pointer;opacity:0.6;">DEV: Boss</button>
-      <button id="dev-skip-sentence" style="padding:4px 10px;background:#000044;color:#4444aa;border:1px solid #000066;border-radius:4px;font-size:0.65rem;cursor:pointer;opacity:0.6;">DEV: Sentence</button>
-      <button id="dev-skip-49" style="padding:4px 10px;background:#444400;color:#aaaa44;border:1px solid #666600;border-radius:4px;font-size:0.65rem;cursor:pointer;opacity:0.6;">DEV: 49/50</button>
     </div>
 
     <canvas id="confetti-canvas"></canvas>
@@ -157,9 +153,6 @@
     <!-- Sentence Game — Endgame -->
     <div id="sentence-game" class="overlay hidden">
       <div class="sg-layout">
-        <div class="sg-skill-area">
-          <button id="sg-mastered-btn" class="sg-mastered-btn">Mastered (<span id="sg-mastered-count">0</span>)</button>
-        </div>
 
         <!-- Main game area -->
         <div class="sg-main">
