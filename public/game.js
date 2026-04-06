@@ -513,8 +513,8 @@ function startBossBattle() {
     for (let i = 0; i < count; i++) allLetters.push(letter);
   }
   shuffle(allLetters);
-  bossLetters = allLetters.slice(0, 50);
-  bossPool = allLetters.slice(50);
+  bossLetters = allLetters.slice(0, bHp);
+  bossPool = allLetters.slice(bHp);
 
   bossUsedWords = [];
   bossTimeLeft = 300;
