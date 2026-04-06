@@ -1770,15 +1770,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-// DEV buttons (remove before push)
-// ============================================================
-document.getElementById('dev-skip-btn').addEventListener('click', () => showVictoryScreen());
-document.getElementById('dev-skip-final').addEventListener('click', () => {
-  bossLevel = 5;
-  showFinalVictory();
-});
-
-// ============================================================
 // Start
 // ============================================================
 
