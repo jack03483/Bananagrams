@@ -13,11 +13,13 @@ const LETTER_DIST = {
 };
 
 // Boss level config: [bossHp, playerHp, minWordLength]
+// Level 0 = first encounter (no level shown), then levels 1-5
 const BOSS_LEVELS = [
-  [50, 50, 2],   // Level 1
-  [60, 40, 3],   // Level 2
-  [70, 30, 4],   // Level 3
-  [80, 20, 5],   // Level 4
+  [50, 50, 2],   // Level 0 (first encounter)
+  [60, 40, 3],   // Level 1
+  [70, 30, 4],   // Level 2
+  [80, 20, 5],   // Level 3
+  [90, 10, 6],   // Level 4
   [100, 1, 7],   // Level 5
 ];
 
@@ -33,7 +35,7 @@ let peelCooldown = false;
 let cursorRow = Math.floor(BOARD_SIZE / 2);
 let cursorCol = Math.floor(BOARD_SIZE / 2);
 let boardFocused = false;
-let bossLevel = 0; // 0 = not started, 1-5 = levels
+let bossLevel = -1; // -1 = not started, 0 = first encounter, 1-5 = levels
 
 // ============================================================
 // Initialization
@@ -462,7 +464,7 @@ function showVictoryScreen() {
   fireConfetti(8000);
   const vs = document.getElementById('victory-screen');
   document.getElementById('victory-sub-text').textContent =
-    bossLevel === 0 ? `You placed ${TILES_TO_WIN}+ tiles!` : `Level ${bossLevel} complete!`;
+    bossLevel < 0 ? `You placed ${TILES_TO_WIN}+ tiles!` : `Level ${bossLevel} complete!`;
   vs.classList.remove('hidden');
 
   setTimeout(() => {
@@ -501,7 +503,7 @@ let swapLetterIndex = null;
 
 function startBossBattle() {
   bossLevel = Math.min(bossLevel + 1, 5);
-  const [bHp, pHp, minLen] = BOSS_LEVELS[bossLevel - 1];
+  const [bHp, pHp, minLen] = BOSS_LEVELS[bossLevel];
   bossMaxHp = bHp; playerMaxHp = pHp; bossMinWordLen = minLen;
   bossHp = bHp; playerBossHp = pHp;
 
@@ -519,7 +521,7 @@ function startBossBattle() {
   swapLetterIndex = null;
 
   // Update UI
-  document.getElementById('boss-level-display').textContent = `Level ${bossLevel}`;
+  document.getElementById('boss-level-display').textContent = bossLevel > 0 ? `Level ${bossLevel}` : '';
   document.getElementById('boss-min-word-len').textContent =
     bossMinWordLen > 2 ? `Min ${bossMinWordLen} letters` : '';
 
@@ -667,7 +669,8 @@ function bossVictory() {
   const bv = document.getElementById('boss-victory');
   bv.classList.remove('hidden');
   fireConfetti(10000);
-  document.getElementById('boss-victory-msg').textContent = `Level ${bossLevel} cleared.`;
+  document.getElementById('boss-victory-msg').textContent =
+    bossLevel === 0 ? 'Boss defeated.' : `Level ${bossLevel} cleared.`;
   document.getElementById('boss-next-action').textContent = 'Next Round';
   document.getElementById('boss-next-action').onclick = () => {
     bv.classList.add('hidden');
@@ -1009,6 +1012,11 @@ document.addEventListener('keydown', (e) => {
 
   if (key === 'Escape') { boardFocused = false; selectedTile = null; renderBoard(); }
 });
+
+// ============================================================
+// DEV: Skip to boss (remove before push)
+// ============================================================
+document.getElementById('dev-skip-btn').addEventListener('click', () => showVictoryScreen());
 
 // ============================================================
 // Start
