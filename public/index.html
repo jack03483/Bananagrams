@@ -79,6 +79,7 @@
     <!-- Boss Battle -->
     <div id="boss-battle" class="overlay hidden">
       <div class="boss-battle-content">
+        <div id="boss-player-name" class="boss-player-name"></div>
         <div id="boss-last-def" class="boss-last-def"></div>
         <div class="boss-header">
           <div id="boss-level-display" class="boss-level"></div>
@@ -157,12 +158,14 @@
             <div class="sg-skill-label">SKILL <span id="sg-skill-level">0</span></div>
             <div class="sg-skill-bar"><div id="sg-skill-fill" class="sg-skill-fill"></div></div>
             <span id="sg-skill-badge" class="sg-skill-badge hidden">+0</span>
+            <div id="sg-unspent-text" class="sg-unspent-text"></div>
           </div>
           <button id="sg-mastered-btn" class="sg-mastered-btn">Mastered (<span id="sg-mastered-count">0</span>)</button>
         </div>
 
         <!-- Main game area -->
         <div class="sg-main">
+          <div id="sg-player-name" class="sg-player-name"></div>
           <div id="sg-streak" class="sg-streak"></div>
           <div id="sg-sentence" class="sg-sentence"></div>
           <div id="sg-hint" class="sg-hint"></div>

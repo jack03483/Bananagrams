@@ -596,6 +596,11 @@ function startBossBattle() {
     bossMinWordLen > 2 ? `Min ${bossMinWordLen} letters` : '';
 
   document.getElementById('boss-battle').classList.remove('hidden');
+  const bossNameEl = document.getElementById('boss-player-name');
+  const bTotalE = parseInt(localStorage.getItem('sg-total-earned') || '0');
+  const bLvl = Math.floor(bTotalE / 100) + 1;
+  bossNameEl.textContent = playerName;
+  bossNameEl.style.fontSize = Math.min(3, 0.3 + bLvl * 0.25) + 'rem';
   renderBossState();
   document.getElementById('boss-word-input').value = '';
   document.getElementById('boss-word-input').focus();
@@ -872,6 +877,14 @@ function startSentenceGame() {
   document.getElementById('sentence-game').classList.remove('hidden');
   document.getElementById('sg-score').textContent = '0';
   document.getElementById('sg-correction-panel').classList.add('hidden');
+
+  // Show name with level-based font size
+  const nameEl = document.getElementById('sg-player-name');
+  const totalE = parseInt(localStorage.getItem('sg-total-earned') || '0');
+  const lvl = Math.floor(totalE / 100) + 1;
+  nameEl.textContent = playerName;
+  nameEl.style.fontSize = Math.min(3, 0.3 + lvl * 0.25) + 'rem';
+
   updateSkillDisplay();
   document.getElementById('sg-mastered-count').textContent = sgMasteredWords.length;
   nextSentence();
@@ -1070,11 +1083,15 @@ document.getElementById('sg-skip-btn').addEventListener('click', () => {
 });
 
 function updateSkillDisplay() {
+  const totalEarned = parseInt(localStorage.getItem('sg-total-earned') || '0');
+  sgSkillLevel = Math.floor(totalEarned / 100) + 1;
   document.getElementById('sg-skill-level').textContent = sgSkillLevel;
-  const progress = Math.min(100, sgSkillPoints);
-  document.getElementById('sg-skill-fill').style.width = progress + '%';
 
-  // Show green badge with unspent points
+  // Bar shows progress within current level (0-100)
+  const progressInLevel = totalEarned % 100;
+  document.getElementById('sg-skill-fill').style.width = progressInLevel + '%';
+
+  // Badge shows unspent mastery points
   const badge = document.getElementById('sg-skill-badge');
   if (sgSkillPoints > 0) {
     badge.textContent = '+' + sgSkillPoints;
@@ -1082,6 +1099,12 @@ function updateSkillDisplay() {
   } else {
     badge.classList.add('hidden');
   }
+
+  // Unspent text
+  document.getElementById('sg-unspent-text').textContent =
+    sgSkillPoints > 0 ? sgSkillPoints + ' unspent mastery point' + (sgSkillPoints !== 1 ? 's' : '') : '';
+
+  updatePlayerNameDisplay();
 }
 
 // Skill search modal
