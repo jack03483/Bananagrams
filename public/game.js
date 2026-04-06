@@ -102,6 +102,18 @@ async function loadDictionary() {
 // Sound — pronounce the word using Speech Synthesis
 // ============================================================
 
+function setHeaderMode(mode) {
+  // mode: 'board', 'boss', 'sentence', 'hidden'
+  const info = document.getElementById('game-info');
+  const bar = document.getElementById('top-bar');
+  if (mode === 'hidden') {
+    bar.style.display = 'none';
+  } else {
+    bar.style.display = '';
+    info.style.display = mode === 'board' ? '' : 'none';
+  }
+}
+
 function addSkillPoints(points) {
   sgSkillPoints = parseInt(localStorage.getItem('sg-skillpoints') || '0') + points;
   localStorage.setItem('sg-skillpoints', sgSkillPoints);
@@ -588,6 +600,7 @@ function countBoardTiles() {
 // ============================================================
 
 function showVictoryScreen() {
+  setHeaderMode('hidden');
   fireConfetti(8000);
   const vs = document.getElementById('victory-screen');
   document.getElementById('victory-sub-text').textContent =
@@ -607,6 +620,7 @@ function handleBossRevealContinue() {
   const reveal = document.getElementById('boss-reveal');
   if (reveal.classList.contains('hidden')) return;
   reveal.classList.add('hidden');
+  setHeaderMode('boss');
   startBossBattle();
 }
 
@@ -652,6 +666,7 @@ function startBossBattle() {
   document.getElementById('boss-min-word-len').textContent =
     bossMinWordLen > 2 ? `Min ${bossMinWordLen} letters` : '';
 
+  setHeaderMode('boss');
   document.getElementById('boss-battle').classList.remove('hidden');
   const bossNameEl = document.getElementById('boss-player-name');
   const bTotalE = parseInt(localStorage.getItem('sg-total-earned') || '0');
@@ -895,6 +910,7 @@ function bossDefeat(reason) {
 }
 
 function resetToBoard() {
+  setHeaderMode('board');
   pool = []; buildPool(); board = []; buildBoard();
   rack = []; drawTiles(STARTING_TILES);
   peelCooldown = false; lastValidWords = new Set();
@@ -960,6 +976,7 @@ function startSentenceGame() {
   sgSkillLevel = Math.floor(totalEarned / 100) + 1;
   sgMasteredWords = JSON.parse(localStorage.getItem('sg-mastered') || '[]');
 
+  setHeaderMode('sentence');
   document.getElementById('sentence-game').classList.remove('hidden');
   document.getElementById('sg-score').textContent = '0';
   document.getElementById('sg-correction-panel').classList.add('hidden');
