@@ -766,43 +766,240 @@ function showFinalVictory() {
   }, 4000);
 }
 
-// Click/key on final continue → Word Tetris
+// Click/key on final continue → Sentence Game
 document.getElementById('final-continue').addEventListener('click', () => {
   document.getElementById('final-continue').classList.add('hidden');
-  startWordTetris();
+  startSentenceGame();
 });
 
 // ============================================================
-// ENDGAME: Word Tetris
+// ENDGAME: Sentence Completion Game
 // ============================================================
-// Letters fall one at a time into a grid. When a horizontal row of
-// adjacent letters forms a valid word, those letters clear and you
-// score points (word length squared). Hold one letter in reserve.
-// Reach 10,000 to win. Grid fills up = game over.
 
-const TETRIS_COLS = 10;
-const TETRIS_ROWS = 16;
-const TETRIS_CELL = 44;
-const TETRIS_WIN_SCORE = 1000;
+let sgScore = 0;
+let sgStreak = 0;
+let sgCurrentWord = null;
+let sgSkillPoints = 0;
+let sgSkillLevel = 0;
+let sgMasteredWords = JSON.parse(localStorage.getItem('sg-mastered') || '[]');
+let sgDictKeys = [];
 
-let tetrisGrid = [];
-let tetrisActive = false;
-let tetrisFalling = null; // {letter, col, row (float)}
-let tetrisHold = null;
-let tetrisNext = [];
-let tetrisScore = 0;
-let tetrisSpeed = 1;
-let tetrisLastDrop = 0;
-let tetrisAnimFrame = null;
-let tetrisLastWord = null;
+// Sentence templates
+const SG_TEMPLATES = [
+  'The word _____ means: ',
+  'A word meaning "DEFHERE" is _____.',
+  '_____ : DEFHERE',
+  'What LETTERCOUNT-letter word means "DEFHERE"?',
+  'Fill in: _____  (DEFHERE)',
+];
 
-const TETRIS_LETTERS = 'AAAAAEEEEEIIIIOOOOUUUAAEEIIOOBCDDFFGGHHJKLLMMNNPPRRSSTTWY';
+function startSentenceGame() {
+  if (!dictionary) return;
+  sgDictKeys = Object.keys(dictionary).filter(w => w.length >= 3 && w.length <= 10 && dictionary[w].length > 5);
+  sgScore = 0;
+  sgStreak = 0;
+  sgSkillPoints = parseInt(localStorage.getItem('sg-skillpoints') || '0');
+  sgSkillLevel = parseInt(localStorage.getItem('sg-skilllevel') || '0');
+  sgMasteredWords = JSON.parse(localStorage.getItem('sg-mastered') || '[]');
 
-function randomTetrisLetter() {
-  return TETRIS_LETTERS[Math.floor(Math.random() * TETRIS_LETTERS.length)];
+  document.getElementById('sentence-game').classList.remove('hidden');
+  document.getElementById('sg-score').textContent = '0';
+  updateSkillDisplay();
+  document.getElementById('sg-mastered-count').textContent = sgMasteredWords.length;
+  nextSentence();
 }
 
-function startWordTetris() {
+function nextSentence() {
+  // Pick a random word (not mastered)
+  const masteredSet = new Set(sgMasteredWords);
+  let word, def;
+  for (let tries = 0; tries < 50; tries++) {
+    word = sgDictKeys[Math.floor(Math.random() * sgDictKeys.length)];
+    if (!masteredSet.has(word)) break;
+  }
+  def = dictionary[word];
+  sgCurrentWord = word;
+
+  // Build sentence
+  const templates = [
+    `<span class="sg-blank">${'_ '.repeat(word.length).trim()}</span>`,
+  ];
+  const blank = templates[0];
+
+  document.getElementById('sg-sentence').innerHTML =
+    `Definition: "${def}"<br><br>${blank}`;
+  document.getElementById('sg-hint').textContent = `${word.length} letters`;
+  document.getElementById('sg-feedback').textContent = '';
+  document.getElementById('sg-feedback').className = 'sg-feedback';
+  document.getElementById('sg-input').value = '';
+  document.getElementById('sg-input').focus();
+  document.getElementById('sg-streak').textContent = sgStreak > 0 ? `Streak: ${sgStreak}` : '';
+}
+
+// Submit answer
+document.getElementById('sg-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const input = document.getElementById('sg-input');
+  const answer = input.value.trim().toUpperCase();
+  if (!answer) return;
+
+  const fb = document.getElementById('sg-feedback');
+
+  if (answer === sgCurrentWord) {
+    sgScore += sgCurrentWord.length;
+    sgStreak++;
+    sgSkillPoints++;
+    localStorage.setItem('sg-skillpoints', sgSkillPoints);
+
+    // Check level up (every 10 points)
+    const newLevel = Math.floor(sgSkillPoints / 10);
+    if (newLevel > sgSkillLevel) {
+      sgSkillLevel = newLevel;
+      localStorage.setItem('sg-skilllevel', sgSkillLevel);
+      // Level up animation
+      const wrap = document.getElementById('sg-skill-btn');
+      wrap.classList.add('sg-skill-levelup');
+      setTimeout(() => wrap.classList.remove('sg-skill-levelup'), 1000);
+    }
+
+    document.getElementById('sg-score').textContent = sgScore;
+    updateSkillDisplay();
+
+    fb.textContent = `Correct! "${sgCurrentWord}" — +${sgCurrentWord.length} points`;
+    fb.className = 'sg-feedback sg-correct';
+
+    setTimeout(() => nextSentence(), 1200);
+  } else {
+    sgStreak = 0;
+    fb.textContent = `Incorrect. The word was "${sgCurrentWord}"`;
+    fb.className = 'sg-feedback sg-incorrect';
+    setTimeout(() => nextSentence(), 2000);
+  }
+});
+
+// Spacebar also submits
+document.getElementById('sg-input').addEventListener('keydown', (e) => {
+  if (e.key === ' ') { e.preventDefault(); document.getElementById('sg-form').requestSubmit(); }
+});
+
+// Skip
+document.getElementById('sg-skip-btn').addEventListener('click', () => {
+  const fb = document.getElementById('sg-feedback');
+  fb.textContent = `Skipped. The word was "${sgCurrentWord}"`;
+  fb.className = 'sg-feedback sg-incorrect';
+  sgStreak = 0;
+  setTimeout(() => nextSentence(), 1500);
+});
+
+function updateSkillDisplay() {
+  document.getElementById('sg-skill-level').textContent = sgSkillLevel;
+  document.getElementById('sg-skill-points').textContent = sgSkillPoints;
+  const progress = (sgSkillPoints % 10) / 10 * 100;
+  document.getElementById('sg-skill-fill').style.width = progress + '%';
+}
+
+// Skill search modal
+document.getElementById('sg-skill-btn').addEventListener('click', () => {
+  document.getElementById('sg-search-modal').classList.remove('hidden');
+  document.getElementById('sg-search-input').value = '';
+  document.getElementById('sg-search-result').innerHTML = '';
+  document.getElementById('sg-search-input').focus();
+});
+
+document.getElementById('sg-search-close').addEventListener('click', () => {
+  document.getElementById('sg-search-modal').classList.add('hidden');
+});
+
+document.getElementById('sg-search-input').addEventListener('input', () => {
+  const word = document.getElementById('sg-search-input').value.trim().toUpperCase();
+  const resultEl = document.getElementById('sg-search-result');
+
+  if (!word || word.length < 2) { resultEl.innerHTML = ''; return; }
+
+  if (word in dictionary) {
+    const def = dictionary[word];
+    const alreadyMastered = sgMasteredWords.includes(word);
+    resultEl.innerHTML = `
+      <div class="sg-search-word">${word}</div>
+      <div class="sg-search-def">${def}</div>
+      ${alreadyMastered
+        ? '<div style="color:#9b59b6;font-weight:600;margin-top:0.5rem;">Already mastered</div>'
+        : sgSkillPoints > 0
+          ? `<button class="sg-master-word-btn" onclick="masterWord('${word}')">Master this word (1 skill point)</button>`
+          : '<div style="color:var(--text-muted);margin-top:0.5rem;">Need skill points to master words</div>'
+      }
+    `;
+  } else {
+    resultEl.innerHTML = '<div style="color:var(--text-muted)">Not in dictionary</div>';
+  }
+});
+
+function masterWord(word) {
+  if (sgSkillPoints <= 0) return;
+  sgSkillPoints--;
+  localStorage.setItem('sg-skillpoints', sgSkillPoints);
+  sgMasteredWords.push(word);
+  localStorage.setItem('sg-mastered', JSON.stringify(sgMasteredWords));
+  updateSkillDisplay();
+  document.getElementById('sg-mastered-count').textContent = sgMasteredWords.length;
+
+  // Re-trigger search to update button
+  document.getElementById('sg-search-input').dispatchEvent(new Event('input'));
+}
+
+// Mastered review modal
+let sgMasteredIdx = 0;
+let sgMasteredCurrent = null;
+
+document.getElementById('sg-mastered-btn').addEventListener('click', () => {
+  if (sgMasteredWords.length === 0) return;
+  sgMasteredIdx = 0;
+  document.getElementById('sg-mastered-modal').classList.remove('hidden');
+  showMasteredCard();
+});
+
+document.getElementById('sg-mastered-close').addEventListener('click', () => {
+  document.getElementById('sg-mastered-modal').classList.add('hidden');
+});
+
+function showMasteredCard() {
+  if (sgMasteredWords.length === 0) return;
+  sgMasteredIdx = sgMasteredIdx % sgMasteredWords.length;
+  sgMasteredCurrent = sgMasteredWords[sgMasteredIdx];
+  const def = dictionary[sgMasteredCurrent] || 'No definition';
+
+  document.getElementById('sg-mastered-card').innerHTML = `
+    <div class="sg-mastered-def">${def}</div>
+    <div class="sg-mastered-hint">${'_ '.repeat(sgMasteredCurrent.length).trim()} (${sgMasteredCurrent.length} letters)</div>
+  `;
+  document.getElementById('sg-mastered-input').value = '';
+  document.getElementById('sg-mastered-feedback').textContent = '';
+  document.getElementById('sg-mastered-input').focus();
+}
+
+document.getElementById('sg-mastered-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const answer = document.getElementById('sg-mastered-input').value.trim().toUpperCase();
+  const fb = document.getElementById('sg-mastered-feedback');
+
+  if (answer === sgMasteredCurrent) {
+    fb.textContent = `Correct! ${sgMasteredCurrent}`;
+    fb.className = 'sg-feedback sg-correct';
+    setTimeout(() => { sgMasteredIdx++; showMasteredCard(); }, 1000);
+  } else {
+    fb.textContent = `The word was ${sgMasteredCurrent}`;
+    fb.className = 'sg-feedback sg-incorrect';
+    setTimeout(() => { sgMasteredIdx++; showMasteredCard(); }, 1500);
+  }
+});
+
+document.getElementById('sg-mastered-next').addEventListener('click', () => {
+  sgMasteredIdx++;
+  showMasteredCard();
+});
+
+/**** DEAD TETRIS CODE START (remove later) ***
+function _dead() {
   tetrisGrid = [];
   for (let r = 0; r < TETRIS_ROWS; r++) {
     tetrisGrid[r] = [];
@@ -1132,10 +1329,8 @@ function tetrisGameOver() {
   renderTetris(); // show final state
   setTimeout(() => {
     document.getElementById('word-tetris').classList.add('hidden');
-    document.getElementById('tetris-gameover').classList.remove('hidden');
-    document.getElementById('tetris-final-score').textContent = `Score: ${tetrisScore.toLocaleString()}`;
-  }, 1000);
 }
+*** DEAD TETRIS CODE END ***/
 
 // ============================================================
 // Word Suggestions Sidebar
@@ -1217,8 +1412,7 @@ document.addEventListener('keydown', (e) => {
   if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
   // Block if any overlay is open
   const overlays = ['boss-battle', 'victory-screen', 'boss-reveal', 'boss-victory',
-                    'boss-defeat', 'final-victory', 'final-continue', 'word-tetris',
-                    'tetris-victory', 'tetris-gameover'];
+                    'boss-defeat', 'final-victory', 'final-continue', 'sentence-game'];
   for (const id of overlays) {
     if (!document.getElementById(id).classList.contains('hidden')) {
       // Boss reveal: any key continues
@@ -1226,7 +1420,7 @@ document.addEventListener('keydown', (e) => {
       // Final continue: any key continues
       if (id === 'final-continue') {
         document.getElementById('final-continue').classList.add('hidden');
-        startWordTetris();
+        startSentenceGame();
       }
       return;
     }

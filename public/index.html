@@ -58,7 +58,7 @@
       </div>
     </div>
 
-    <!-- Boss Reveal (board → speed round) -->
+    <!-- Boss Reveal -->
     <div id="boss-reveal" class="overlay hidden">
       <img src="continue1.png" alt="" class="boss-reveal-img">
     </div>
@@ -104,7 +104,7 @@
       </div>
     </div>
 
-    <!-- Boss Victory (level up) -->
+    <!-- Boss Victory -->
     <div id="boss-victory" class="overlay hidden">
       <div class="victory-content boss-win">
         <div class="victory-title">LEVEL UP!</div>
@@ -124,61 +124,77 @@
 
     <!-- Final Victory -->
     <div id="final-victory" class="overlay hidden">
-      <div class="victory-content" style="text-align:center;">
+      <div class="victory-content">
         <div class="final-victory-title">CHAMPION</div>
         <div class="victory-sub">All five levels. Conquered.</div>
       </div>
     </div>
 
-    <!-- Final Continue → Word Tetris -->
+    <!-- Final Continue -->
     <div id="final-continue" class="overlay hidden">
       <img src="continue2.png" alt="" class="boss-reveal-img">
     </div>
 
-    <!-- Word Tetris — Endgame -->
-    <div id="word-tetris" class="overlay hidden">
-      <div class="tetris-layout">
-        <div class="tetris-left">
-          <div class="tetris-hud">
-            <div>Score: <strong id="tetris-score">0</strong> / 1,000</div>
-            <div class="tetris-hold-label">HOLD <span class="tetris-hold-key">[SHIFT]</span></div>
-            <div id="tetris-hold" class="tetris-hold-tile"></div>
+    <!-- Sentence Game — Endgame -->
+    <div id="sentence-game" class="overlay hidden">
+      <div class="sg-layout">
+        <!-- Skill bar top-right -->
+        <div class="sg-skill-area">
+          <div class="sg-skill-bar-wrap" id="sg-skill-btn" title="Click to search & master words">
+            <div class="sg-skill-label">SKILL <span id="sg-skill-level">0</span></div>
+            <div class="sg-skill-bar"><div id="sg-skill-fill" class="sg-skill-fill"></div></div>
+            <div class="sg-skill-points">Points: <span id="sg-skill-points">0</span></div>
           </div>
-          <div class="tetris-speed-label">Speed: <span id="tetris-speed">1</span></div>
+          <button id="sg-mastered-btn" class="sg-mastered-btn">Mastered (<span id="sg-mastered-count">0</span>)</button>
         </div>
-        <div class="tetris-center">
-          <div id="tetris-last-word" class="tetris-last-word"></div>
-          <div class="tetris-board-wrap">
-            <canvas id="tetris-canvas"></canvas>
+
+        <!-- Main game area -->
+        <div class="sg-main">
+          <div id="sg-streak" class="sg-streak"></div>
+          <div id="sg-sentence" class="sg-sentence"></div>
+          <div id="sg-hint" class="sg-hint"></div>
+          <form id="sg-form" class="sg-form">
+            <input type="text" id="sg-input" placeholder="Type the missing word..."
+                   autocomplete="off" autocapitalize="off" spellcheck="false" autofocus>
+            <button type="submit">Check</button>
+            <button type="button" id="sg-skip-btn" class="sg-skip">Skip</button>
+          </form>
+          <div id="sg-feedback" class="sg-feedback"></div>
+          <div id="sg-score-display" class="sg-score-display">Score: <strong id="sg-score">0</strong></div>
+        </div>
+      </div>
+
+      <!-- Skill Search Modal -->
+      <div id="sg-search-modal" class="sg-modal hidden">
+        <div class="sg-modal-content">
+          <div class="sg-modal-header">
+            <h3>Search & Master Words</h3>
+            <button id="sg-search-close" class="sg-modal-close">&times;</button>
           </div>
-        </div>
-        <div class="tetris-right">
-          <div class="tetris-next-label">NEXT</div>
-          <div id="tetris-next" class="tetris-next-tiles"></div>
-          <div class="tetris-controls">
-            <div>← → Move</div>
-            <div>↓ Drop</div>
-            <div>SHIFT Hold</div>
+          <div class="sg-search-area">
+            <input type="text" id="sg-search-input" placeholder="Type any word..."
+                   autocomplete="off" autocapitalize="off" spellcheck="false">
+            <div id="sg-search-result" class="sg-search-result"></div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Tetris Victory -->
-    <div id="tetris-victory" class="overlay hidden">
-      <div class="victory-content" style="text-align:center;">
-        <div class="final-victory-title">WORD MASTER</div>
-        <div class="victory-sub">10,000 points. Unstoppable.</div>
-        <button onclick="location.reload()" class="play-again-btn-v">Play Again</button>
-      </div>
-    </div>
-
-    <!-- Tetris Game Over -->
-    <div id="tetris-gameover" class="overlay hidden">
-      <div class="victory-content boss-lose" style="text-align:center;">
-        <div class="defeat-title">GAME OVER</div>
-        <div id="tetris-final-score" class="victory-sub"></div>
-        <button onclick="location.reload()" class="play-again-btn-v">Try Again</button>
+      <!-- Mastered Review Modal -->
+      <div id="sg-mastered-modal" class="sg-modal hidden">
+        <div class="sg-modal-content">
+          <div class="sg-modal-header">
+            <h3>Mastered Words</h3>
+            <button id="sg-mastered-close" class="sg-modal-close">&times;</button>
+          </div>
+          <div id="sg-mastered-card" class="sg-mastered-card"></div>
+          <form id="sg-mastered-form" class="sg-form">
+            <input type="text" id="sg-mastered-input" placeholder="Type the word..."
+                   autocomplete="off" autocapitalize="off" spellcheck="false">
+            <button type="submit">Check</button>
+            <button type="button" id="sg-mastered-next">Skip</button>
+          </form>
+          <div id="sg-mastered-feedback" class="sg-feedback"></div>
+        </div>
       </div>
     </div>
   </div>

@@ -385,6 +385,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100vw;
 }
 
 .overlay.hidden { display: none; }
@@ -810,118 +811,281 @@ body {
 #final-victory { background: rgba(0,0,0,0.9); }
 #final-continue { background: #000; cursor: pointer; animation: fadeInSlow 2s ease; }
 
-/* Word Tetris */
-#word-tetris { background: linear-gradient(180deg, #0a0a14 0%, #10101e 100%); }
+/* Sentence Game — Endgame */
+#sentence-game { background: var(--bg); }
 
-.tetris-layout {
+.sg-layout {
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.5rem;
-  padding: 1rem;
+  padding: 2rem;
+  position: relative;
 }
 
-.tetris-left, .tetris-right {
-  width: 140px;
+.sg-skill-area {
+  position: absolute;
+  top: 1rem;
+  right: 1.5rem;
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  color: var(--text);
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.tetris-hud { font-size: 0.9rem; }
-.tetris-hud strong { font-size: 1.4rem; color: var(--accent); }
+.sg-skill-bar-wrap {
+  cursor: pointer;
+  text-align: right;
+  transition: transform 0.15s;
+}
 
-.tetris-hold-label, .tetris-next-label {
+.sg-skill-bar-wrap:hover { transform: scale(1.05); }
+
+.sg-skill-label {
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.15em;
-  color: var(--text-muted);
-  margin-bottom: 0.3rem;
+  color: var(--accent);
 }
 
-.tetris-hold-key { color: #666; font-size: 0.6rem; }
+.sg-skill-bar {
+  width: 120px;
+  height: 8px;
+  background: #2a2a40;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 0.2rem;
+}
 
-.tetris-hold-tile, .tetris-next-tile {
-  width: 44px;
-  height: 44px;
-  background: var(--tile-bg);
-  color: var(--tile-text);
-  border: 2px solid var(--tile-border);
+.sg-skill-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #e9b44c, #f1c40f);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.sg-skill-points { font-size: 0.65rem; color: var(--text-muted); margin-top: 0.15rem; }
+
+.sg-mastered-btn {
+  padding: 0.35rem 0.75rem;
+  background: rgba(142, 68, 173, 0.15);
+  color: #b080d0;
+  border: 1px solid rgba(142, 68, 173, 0.3);
   border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sg-mastered-btn:hover { background: rgba(142, 68, 173, 0.3); border-color: #9b59b6; }
+
+/* Skill level up animation */
+@keyframes skillLevelUp {
+  0% { box-shadow: 0 0 0 rgba(233,180,76,0); }
+  50% { box-shadow: 0 0 30px rgba(233,180,76,0.8), 0 0 60px rgba(241,196,15,0.4); }
+  100% { box-shadow: 0 0 0 rgba(233,180,76,0); }
+}
+
+.sg-skill-levelup { animation: skillLevelUp 1s ease; }
+
+/* Main game */
+.sg-main {
+  max-width: 650px;
+  width: 100%;
+  text-align: center;
+}
+
+.sg-streak {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  min-height: 1.2rem;
+}
+
+.sg-sentence {
+  font-size: 1.5rem;
+  line-height: 1.7;
+  color: var(--text);
+  margin-bottom: 1.5rem;
+  min-height: 3rem;
+}
+
+.sg-sentence .sg-blank {
+  display: inline-block;
+  min-width: 100px;
+  border-bottom: 3px solid var(--accent);
+  margin: 0 0.3rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.sg-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+  font-style: italic;
+}
+
+.sg-form {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.sg-form input {
+  padding: 0.75rem 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--card-bg, #2a2a40);
+  color: var(--text);
+  border: 2px solid #3a3a55;
+  border-radius: 10px;
+  outline: none;
+  width: 250px;
+}
+
+.sg-form input:focus { border-color: var(--accent); }
+
+.sg-form button {
+  padding: 0.75rem 1.25rem;
+  background: var(--accent);
+  color: #1a1a2e;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sg-form button:hover { filter: brightness(1.1); }
+
+.sg-skip {
+  background: transparent !important;
+  color: var(--text-muted) !important;
+  border: 1px solid #3a3a55 !important;
+}
+
+.sg-skip:hover { border-color: var(--text-muted) !important; }
+
+.sg-feedback {
+  font-size: 1rem;
+  font-weight: 600;
+  min-height: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sg-feedback.sg-correct { color: var(--valid); }
+.sg-feedback.sg-incorrect { color: var(--invalid); }
+
+.sg-score-display { font-size: 0.9rem; color: var(--text-muted); }
+.sg-score-display strong { color: var(--accent); font-size: 1.1rem; }
+
+/* Modals */
+.sg-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0,0,0,0.8);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Georgia', serif;
-  font-size: 1.3rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 -2px 0 var(--tile-shadow);
 }
 
-.tetris-hold-tile:empty, .tetris-next-tile:empty {
-  background: #16162a;
-  border-color: #2a2a44;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+.sg-modal.hidden { display: none; }
+
+.sg-modal-content {
+  background: var(--bg);
+  border: 1px solid #2a2a40;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
-.tetris-next-tiles {
+.sg-modal-header {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.tetris-center {
-  display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
+  margin-bottom: 1.5rem;
 }
 
-.tetris-last-word {
+.sg-modal-header h3 { font-size: 1.1rem; color: var(--text); }
+
+.sg-modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.sg-search-area { display: flex; flex-direction: column; gap: 1rem; }
+
+#sg-search-input {
+  padding: 0.75rem 1rem;
+  font-size: 1.1rem;
+  background: #2a2a40;
+  color: var(--text);
+  border: 2px solid #3a3a55;
+  border-radius: 10px;
+  outline: none;
+}
+
+#sg-search-input:focus { border-color: var(--accent); }
+
+.sg-search-result { min-height: 4rem; }
+
+.sg-search-word {
+  font-family: 'Courier New', monospace;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.sg-search-def {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0.5rem 0;
+}
+
+.sg-master-word-btn {
+  padding: 0.5rem 1rem;
+  background: #8e44ad;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sg-master-word-btn:hover { background: #9b59b6; }
+.sg-master-word-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.sg-mastered-card {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+.sg-mastered-def {
+  font-size: 1.1rem;
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+}
+
+.sg-mastered-hint {
   font-size: 0.85rem;
   color: var(--text-muted);
-  font-style: italic;
-  min-height: 1.4rem;
-  margin-bottom: 0.5rem;
-  text-align: center;
-  max-width: 440px;
-}
-
-.tetris-last-word strong {
-  color: var(--accent);
-  font-style: normal;
-  text-transform: uppercase;
-}
-
-.tetris-board-wrap {
-  border: 2px solid #2a2a44;
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04);
-  background: #0e0e1a;
-  padding: 6px;
-}
-
-#tetris-canvas {
-  display: block;
-  background: #0f0f1a;
-  border-radius: 8px;
-}
-
-.tetris-controls {
-  font-size: 0.7rem;
-  color: #444;
-  line-height: 1.8;
-  margin-top: 1.5rem;
-  padding: 0.75rem;
-  background: rgba(255,255,255,0.02);
-  border-radius: 8px;
-  border: 1px solid #1e1e30;
-}
-
-.tetris-speed-label {
-  font-size: 0.8rem;
-  color: var(--text-muted);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.2em;
 }
