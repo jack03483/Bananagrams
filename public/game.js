@@ -1112,24 +1112,7 @@ document.getElementById('sg-skill-btn').addEventListener('click', () => {
   document.getElementById('sg-search-modal').classList.remove('hidden');
   document.getElementById('sg-search-input').value = '';
   document.getElementById('sg-search-input').focus();
-
-  // Show suggested common words to master
-  const masteredSet = new Set(sgMasteredWords);
-  const common = ['HELLO','WORLD','HOUSE','WATER','LIGHT','MUSIC','DREAM','HEART','SMILE',
-    'DANCE','LAUGH','SLEEP','BRAIN','TABLE','CHAIR','KNIFE','THROW','CATCH','CLIMB',
-    'SPEAK','WRITE','YOUNG','GREAT','SMALL','LARGE','THREE','UNDER','NEVER','AFTER',
-    'PLACE','EVERY','STILL','THINK','RIGHT','ABOUT','PEOPLE','COULD','WOULD','THEIR',
-    'WHICH','THERE','PLANT','RIVER','STONE','BREAD','QUIET','STORM','OCEAN','FLAME',
-    'FROST','BLOOM','BRAVE','SWIFT','GRACE','POWER','BEAST','CROWN','FORGE','QUEST'];
-  const suggestions = common.filter(w => w in dictionary && !masteredSet.has(w)).slice(0, 12);
-
-  let html = '<div class="sg-search-suggestions"><div class="sg-search-suggest-label">Suggested words to master:</div>';
-  html += '<div class="sg-search-suggest-grid">';
-  suggestions.forEach(w => {
-    html += `<button class="sg-suggest-chip" onclick="document.getElementById('sg-search-input').value='${w}';document.getElementById('sg-search-input').dispatchEvent(new Event('input'))">${w.toLowerCase()}</button>`;
-  });
-  html += '</div></div>';
-  document.getElementById('sg-search-result').innerHTML = html;
+  refreshSearchSuggestions();
 });
 
 document.getElementById('sg-search-close').addEventListener('click', () => {
@@ -1186,14 +1169,26 @@ function masterWord(word) {
 
 function refreshSearchSuggestions() {
   const masteredSet = new Set(sgMasteredWords);
-  const common = ['HELLO','WORLD','HOUSE','WATER','LIGHT','MUSIC','DREAM','HEART','SMILE',
-    'DANCE','LAUGH','SLEEP','BRAIN','TABLE','CHAIR','KNIFE','THROW','CATCH','CLIMB',
-    'SPEAK','WRITE','YOUNG','GREAT','SMALL','LARGE','THREE','UNDER','NEVER','AFTER',
-    'PLACE','EVERY','STILL','THINK','RIGHT','ABOUT','PLANT','RIVER','STONE','BREAD',
-    'QUIET','STORM','OCEAN','FLAME','FROST','BLOOM','BRAVE','SWIFT','GRACE','POWER',
-    'BEAST','CROWN','FORGE','QUEST','MAGIC','GHOST','SPELL','TRICK','VOICE','ARROW',
-    'BLADE','SHIELD','TOWER','WITCH','ROGUE','DWARF','GIANT','REALM','PEARL','CORAL'];
-  const suggestions = common.filter(w => w in dictionary && !masteredSet.has(w)).slice(0, 12);
+
+  // Get all short, common-feeling words (3-7 letters) that aren't mastered
+  // Filter for words with simple definitions (shorter def = more common word)
+  if (!dictionary) return;
+
+  const candidates = [];
+  for (const word of Object.keys(dictionary)) {
+    if (masteredSet.has(word)) continue;
+    if (word.length < 3 || word.length > 7) continue;
+    const def = dictionary[word];
+    if (!def || def.length > 60) continue; // short definitions = common words
+    candidates.push(word);
+  }
+
+  // Shuffle and pick 20
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+  const suggestions = candidates.slice(0, 20);
 
   let html = '<div class="sg-search-suggestions"><div class="sg-search-suggest-label">Suggested words to master:</div>';
   html += '<div class="sg-search-suggest-grid">';
