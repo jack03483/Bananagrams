@@ -1,21 +1,21 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #1a1a2e;
-  --board-bg: #16213e;
-  --cell-bg: #0f3460;
-  --cell-border: #1a4a7a;
-  --tile-bg: #f5deb3;
+  --bg: #181825;
+  --board-bg: #1e1e30;
+  --cell-bg: #252540;
+  --cell-border: #2e2e4a;
+  --tile-bg: #f7e8c8;
   --tile-text: #2c1810;
-  --tile-border: #c4a56e;
-  --tile-shadow: #a08050;
-  --rack-bg: #1a1a2e;
-  --sidebar-bg: #16213e;
-  --text: #e0e0e0;
-  --text-muted: #8899aa;
+  --tile-border: #d4b070;
+  --tile-shadow: #b89050;
+  --rack-bg: #1a1a2a;
+  --sidebar-bg: #1a1a2a;
+  --text: #e8e8ee;
+  --text-muted: #7788a0;
   --accent: #e9b44c;
-  --valid: #4caf50;
-  --invalid: #e57373;
+  --valid: #5cc878;
+  --invalid: #e06060;
 }
 
 html, body { height: 100%; overflow: hidden; }
@@ -33,12 +33,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 1.5rem;
-  background: #0f0f23;
-  border-bottom: 2px solid #2a2a4a;
+  padding: 0.6rem 1.5rem;
+  background: #141420;
+  border-bottom: 1px solid #2a2a40;
 }
 
-#top-bar h1 { font-size: 1.3rem; color: var(--accent); }
+#top-bar h1 { font-size: 1.3rem; color: var(--accent); letter-spacing: 0.02em; }
 
 #game-info {
   display: flex;
@@ -71,7 +71,7 @@ body {
 #board-container {
   flex: 1;
   overflow: auto;
-  padding: 1rem;
+  padding: 1.5rem;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -79,73 +79,94 @@ body {
 
 #board {
   display: grid;
-  grid-template-columns: repeat(25, 38px);
-  grid-template-rows: repeat(25, 38px);
-  gap: 1px;
+  grid-template-columns: repeat(25, 36px);
+  grid-template-rows: repeat(25, 36px);
+  gap: 2px;
   background: var(--board-bg);
-  border: 2px solid #2a3a5a;
-  border-radius: 4px;
+  border: 1px solid #2a2a40;
+  border-radius: 12px;
+  padding: 4px;
   flex-shrink: 0;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03);
 }
 
 .cell {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   background: var(--cell-bg);
   border: 1px solid var(--cell-border);
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 800;
   cursor: pointer;
-  transition: background 0.1s;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
   position: relative;
 }
 
-.cell:hover { background: #1a5a8a; }
+.cell:hover {
+  background: #30305a;
+  border-color: #4a4a70;
+}
 
 .cell.has-tile {
   background: var(--tile-bg);
   color: var(--tile-text);
   border-color: var(--tile-border);
+  border-radius: 6px;
   cursor: grab;
   font-family: 'Georgia', serif;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   text-transform: uppercase;
-  box-shadow: inset 0 -2px 0 var(--tile-shadow);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 -2px 0 var(--tile-shadow), inset 0 1px 0 rgba(255,255,255,0.3);
+  transition: transform 0.1s, box-shadow 0.1s;
 }
 
-.cell.has-tile:active { cursor: grabbing; }
+.cell.has-tile:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.3), inset 0 -2px 0 var(--tile-shadow), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.cell.has-tile:active { cursor: grabbing; transform: translateY(0); }
 
 .cell.drag-over {
-  background: #2a7aba;
+  background: #3a3a60;
   border-color: var(--accent);
+  border-style: dashed;
 }
 
-.cell.valid-word { border-color: var(--valid); }
-.cell.invalid-word { border-color: var(--invalid); }
+.cell.valid-word {
+  border-color: var(--valid);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 -2px 0 var(--tile-shadow), inset 0 1px 0 rgba(255,255,255,0.3), 0 0 6px rgba(92,200,120,0.2);
+}
+
+.cell.invalid-word {
+  border-color: var(--invalid);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 -2px 0 var(--tile-shadow), inset 0 1px 0 rgba(255,255,255,0.3), 0 0 6px rgba(224,96,96,0.2);
+}
 
 .cell.selected {
-  outline: 3px solid var(--accent);
-  outline-offset: -3px;
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .cell.cursor {
-  outline: 2px solid #5dade2;
-  outline-offset: -2px;
-  background: #0f3470;
+  background: #2a2a50;
+  border-color: #5dade2;
+  box-shadow: 0 0 8px rgba(93,173,226,0.25);
 }
 
 .cell.cursor.has-tile {
-  outline-color: #5dade2;
+  border-color: #5dade2;
 }
 
 /* Rack */
 #rack-area {
   background: var(--rack-bg);
-  border-top: 2px solid #2a2a4a;
-  padding: 0.75rem 1rem;
+  border-top: 1px solid #2a2a40;
+  padding: 0.75rem 1.5rem;
 }
 
 #rack-label {
@@ -158,18 +179,22 @@ body {
 }
 
 .main-swap-btn {
-  padding: 0.2rem 0.6rem;
-  background: #8e44ad;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  background: rgba(142, 68, 173, 0.2);
+  color: #b080d0;
+  border: 1px solid rgba(142, 68, 173, 0.4);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.15s;
 }
 
-.main-swap-btn:hover { background: #9b59b6; }
+.main-swap-btn:hover {
+  background: rgba(142, 68, 173, 0.35);
+  border-color: #9b59b6;
+  color: #c8a0e8;
+}
 
 #rack {
   display: flex;
@@ -179,23 +204,23 @@ body {
 }
 
 .rack-tile {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   background: var(--tile-bg);
   color: var(--tile-text);
   border: 2px solid var(--tile-border);
-  border-radius: 4px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: 'Georgia', serif;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 800;
   text-transform: uppercase;
   cursor: grab;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 -2px 0 var(--tile-shadow);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25), inset 0 -2px 0 var(--tile-shadow), inset 0 1px 0 rgba(255,255,255,0.35);
   user-select: none;
-  transition: transform 0.1s, box-shadow 0.1s;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .rack-tile:hover {
@@ -217,9 +242,9 @@ body {
 
 /* Sidebar */
 #sidebar {
-  width: 320px;
+  width: 300px;
   background: var(--sidebar-bg);
-  border-left: 2px solid #2a2a4a;
+  border-left: 1px solid #2a2a40;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -227,7 +252,7 @@ body {
 
 #sidebar-header {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #2a3a5a;
+  border-bottom: 1px solid #2a2a40;
 }
 
 #sidebar-header h2 {
