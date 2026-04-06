@@ -79,8 +79,8 @@ body {
 
 #board {
   display: grid;
-  grid-template-columns: repeat(31, 38px);
-  grid-template-rows: repeat(31, 38px);
+  grid-template-columns: repeat(25, 38px);
+  grid-template-rows: repeat(25, 38px);
   gap: 1px;
   background: var(--board-bg);
   border: 2px solid #2a3a5a;
@@ -658,3 +658,92 @@ body {
 
 #boss-victory, #boss-defeat { background: rgba(0,0,0,0.9); }
 .boss-lose { animation: shake 0.5s ease; }
+
+/* Boss level display */
+.boss-level {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+}
+
+.boss-min-len {
+  font-size: 0.75rem;
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.boss-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Final victory */
+.final-victory-title {
+  font-size: 6rem;
+  font-weight: 900;
+  color: #f1c40f;
+  text-shadow: 0 0 80px rgba(241,196,15,0.6), 0 8px 0 #b8860b;
+  letter-spacing: 0.15em;
+  margin-bottom: 1rem;
+}
+
+#final-victory { background: rgba(0,0,0,0.9); }
+#final-continue { background: #000; cursor: pointer; animation: fadeInSlow 2s ease; }
+
+/* Word Rain */
+#word-rain { background: #0a0a12; }
+
+.rain-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.rain-hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background: #0f0f1a;
+  border-bottom: 2px solid #2a2a4a;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.rain-title {
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+}
+
+#rain-canvas {
+  flex: 1;
+  width: 100%;
+}
+
+.rain-input-area {
+  padding: 0.75rem 1.5rem;
+  background: #0f0f1a;
+  border-top: 2px solid #2a2a4a;
+}
+
+#rain-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: #111;
+  color: var(--text);
+  border: 2px solid #444;
+  border-radius: 8px;
+  outline: none;
+}
+
+#rain-input:focus { border-color: var(--accent); }

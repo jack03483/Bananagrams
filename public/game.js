@@ -2,14 +2,24 @@
 // Bananagrams — Game Logic
 // ============================================================
 
-const BOARD_SIZE = 31;
+const BOARD_SIZE = 25;
 const STARTING_TILES = 15;
+const TILES_TO_WIN = 100;
+const PEEL_COUNT = 15;
 
-// Bananagrams letter distribution (144 tiles)
 const LETTER_DIST = {
   A:13, B:3, C:3, D:6, E:18, F:3, G:4, H:3, I:12, J:2, K:2,
   L:5, M:3, N:8, O:11, P:3, Q:2, R:9, S:6, T:9, U:6, V:3, W:3, X:2, Y:3, Z:2
 };
+
+// Boss level config: [bossHp, playerHp, minWordLength]
+const BOSS_LEVELS = [
+  [50, 50, 2],   // Level 1
+  [60, 40, 3],   // Level 2
+  [70, 30, 4],   // Level 3
+  [80, 20, 5],   // Level 4
+  [100, 1, 7],   // Level 5
+];
 
 // State
 let pool = [];
@@ -23,6 +33,7 @@ let peelCooldown = false;
 let cursorRow = Math.floor(BOARD_SIZE / 2);
 let cursorCol = Math.floor(BOARD_SIZE / 2);
 let boardFocused = false;
+let bossLevel = 0; // 0 = not started, 1-5 = levels
 
 // ============================================================
 // Initialization
@@ -49,17 +60,13 @@ function buildBoard() {
   board = [];
   for (let r = 0; r < BOARD_SIZE; r++) {
     board[r] = [];
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      board[r][c] = null;
-    }
+    for (let c = 0; c < BOARD_SIZE; c++) board[r][c] = null;
   }
 }
 
 function drawTiles(count) {
   const n = Math.min(count, pool.length);
-  for (let i = 0; i < n; i++) {
-    rack.push(pool.pop());
-  }
+  for (let i = 0; i < n; i++) rack.push(pool.pop());
   updateCounts();
 }
 
@@ -78,8 +85,8 @@ async function loadDictionary() {
   try {
     const res = await fetch('dictionary.json');
     dictionary = await res.json();
-    const count = Object.keys(dictionary).length;
-    document.getElementById('word-count-label').textContent = `${count.toLocaleString()} words in dictionary`;
+    document.getElementById('word-count-label').textContent =
+      `${Object.keys(dictionary).length.toLocaleString()} words in dictionary`;
     updateWordSuggestions();
   } catch (err) {
     document.getElementById('word-count-label').textContent = 'Error loading dictionary';
@@ -116,15 +123,24 @@ function renderBoard() {
         cell.textContent = board[r][c];
       }
 
-      if (boardFocused && r === cursorRow && c === cursorCol) {
-        cell.classList.add('cursor');
-      }
+      if (boardFocused && r === cursorRow && c === cursorCol) cell.classList.add('cursor');
 
       cell.addEventListener('click', () => {
-        cursorRow = r; cursorCol = c;
-        boardFocused = true;
+        cursorRow = r; cursorCol = c; boardFocused = true;
         handleCellClick(r, c);
       });
+
+      // Double click to return tile to rack
+      cell.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        if (board[r][c]) {
+          rack.push(board[r][c]);
+          board[r][c] = null;
+          selectedTile = null;
+          renderBoard(); renderRack(); scheduleWordSuggestions();
+        }
+      });
+
       cell.addEventListener('dragover', (e) => { e.preventDefault(); cell.classList.add('drag-over'); });
       cell.addEventListener('dragleave', () => { cell.classList.remove('drag-over'); });
       cell.addEventListener('drop', (e) => { e.preventDefault(); cell.classList.remove('drag-over'); handleDrop(r, c); });
@@ -156,16 +172,12 @@ function renderRack() {
     tile.textContent = letter;
     tile.draggable = true;
 
-    if (selectedTile && selectedTile.source === 'rack' && selectedTile.index === i) {
+    if (selectedTile && selectedTile.source === 'rack' && selectedTile.index === i)
       tile.classList.add('selected');
-    }
 
     tile.addEventListener('click', () => {
-      if (selectedTile && selectedTile.source === 'rack' && selectedTile.index === i) {
-        selectedTile = null;
-      } else {
-        selectedTile = { source: 'rack', index: i, letter };
-      }
+      if (selectedTile && selectedTile.source === 'rack' && selectedTile.index === i) selectedTile = null;
+      else selectedTile = { source: 'rack', index: i, letter };
       renderRack();
     });
 
@@ -185,13 +197,10 @@ function renderRack() {
   rackEl.addEventListener('drop', (e) => {
     e.preventDefault();
     if (selectedTile && selectedTile.source === 'board') {
-      const { row, col, letter } = selectedTile;
-      board[row][col] = null;
-      rack.push(letter);
+      board[selectedTile.row][selectedTile.col] = null;
+      rack.push(selectedTile.letter);
       selectedTile = null;
-      renderBoard();
-      renderRack();
-      scheduleWordSuggestions();
+      renderBoard(); renderRack(); scheduleWordSuggestions();
     }
   });
 }
@@ -202,40 +211,25 @@ function renderRack() {
 
 document.getElementById('main-swap-btn').addEventListener('click', () => {
   if (!selectedTile || selectedTile.source !== 'rack') {
-    const statusEl = document.getElementById('status-msg');
-    statusEl.textContent = 'Click a rack tile first, then Swap';
-    statusEl.style.color = 'var(--accent)';
-    setTimeout(() => { statusEl.textContent = ''; }, 2000);
+    showStatus('Click a rack tile first, then Swap', 'var(--accent)');
     return;
   }
-  if (pool.length < 3) {
-    const statusEl = document.getElementById('status-msg');
-    statusEl.textContent = 'Not enough tiles in the pool!';
-    statusEl.style.color = 'var(--invalid)';
-    setTimeout(() => { statusEl.textContent = ''; }, 2000);
-    return;
-  }
+  if (pool.length < 3) { showStatus('Not enough tiles in the pool!', 'var(--invalid)'); return; }
 
-  // Remove selected tile from rack, put back in pool
   const removed = rack.splice(selectedTile.index, 1)[0];
-  pool.push(removed);
-  shuffle(pool);
-
-  // Draw 3
-  for (let i = 0; i < 3 && pool.length > 0; i++) {
-    rack.push(pool.pop());
-  }
+  pool.push(removed); shuffle(pool);
+  for (let i = 0; i < 3 && pool.length > 0; i++) rack.push(pool.pop());
 
   selectedTile = null;
-  updateCounts();
-  renderRack();
-  scheduleWordSuggestions();
-
-  const statusEl = document.getElementById('status-msg');
-  statusEl.textContent = `Swapped ${removed} for 3 new tiles`;
-  statusEl.style.color = 'var(--accent)';
-  setTimeout(() => { statusEl.textContent = ''; }, 2000);
+  updateCounts(); renderRack(); scheduleWordSuggestions();
+  showStatus(`Swapped ${removed} for 3 new tiles`, 'var(--accent)');
 });
+
+function showStatus(msg, color) {
+  const el = document.getElementById('status-msg');
+  el.textContent = msg; el.style.color = color;
+  setTimeout(() => { el.textContent = ''; }, 2000);
+}
 
 // ============================================================
 // Interaction
@@ -253,14 +247,9 @@ function handleCellClick(r, c) {
       selectedTile = null; renderBoard();
     } else {
       if (selectedTile.source === 'board') {
-        const temp = board[r][c];
-        board[r][c] = selectedTile.letter;
-        board[selectedTile.row][selectedTile.col] = temp;
+        const temp = board[r][c]; board[r][c] = selectedTile.letter; board[selectedTile.row][selectedTile.col] = temp;
       } else if (selectedTile.source === 'rack') {
-        const boardLetter = board[r][c];
-        board[r][c] = selectedTile.letter;
-        rack.splice(selectedTile.index, 1);
-        rack.push(boardLetter);
+        const bl = board[r][c]; board[r][c] = selectedTile.letter; rack.splice(selectedTile.index, 1); rack.push(bl);
       }
       selectedTile = null;
       renderBoard(); renderRack(); scheduleWordSuggestions();
@@ -269,8 +258,7 @@ function handleCellClick(r, c) {
     if (board[r][c]) {
       selectedTile = { source: 'board', row: r, col: c, letter: board[r][c] };
       renderBoard();
-      const cells = document.querySelectorAll('.cell');
-      cells[r * BOARD_SIZE + c].classList.add('selected');
+      document.querySelectorAll('.cell')[r * BOARD_SIZE + c].classList.add('selected');
     }
   }
 }
@@ -298,16 +286,12 @@ function validateBoard() {
   const cells = document.querySelectorAll('.cell');
   cells.forEach(c => c.classList.remove('valid-word', 'invalid-word'));
 
-  let allValid = true;
-  let hasWords = false;
-
+  let allValid = true, hasWords = false;
   for (const w of words) {
     hasWords = true;
     const valid = isValidWord(w.word);
     if (!valid) allValid = false;
-    for (const pos of w.cells) {
-      cells[pos.row * BOARD_SIZE + pos.col].classList.add(valid ? 'valid-word' : 'invalid-word');
-    }
+    for (const pos of w.cells) cells[pos.row * BOARD_SIZE + pos.col].classList.add(valid ? 'valid-word' : 'invalid-word');
   }
 
   const tilesOnBoard = [];
@@ -319,6 +303,14 @@ function validateBoard() {
   const noFloating = tilesOnBoard.every(t => isPartOfWord(t.r, t.c));
   const rackEmpty = rack.length === 0;
 
+  // Check win: >= TILES_TO_WIN on board, all valid, connected, no floaters
+  if (tilesOnBoard.length >= TILES_TO_WIN && rackEmpty && connected && allValid && hasWords && noFloating && !peelCooldown) {
+    peelCooldown = true;
+    fireConfetti(8000);
+    showVictoryScreen();
+    return;
+  }
+
   if (rackEmpty && tilesOnBoard.length > 0 && connected && allValid && hasWords && noFloating && !peelCooldown) {
     doPeel();
   }
@@ -328,10 +320,8 @@ function validateBoard() {
     if (!allValid) { statusEl.textContent = 'Some words are invalid'; statusEl.style.color = 'var(--invalid)'; }
     else if (!connected) { statusEl.textContent = 'All tiles must be connected'; statusEl.style.color = 'var(--invalid)'; }
     else if (!noFloating) { statusEl.textContent = 'Single letters must be part of a word'; statusEl.style.color = 'var(--invalid)'; }
-    else { statusEl.textContent = ''; }
-  } else {
-    statusEl.textContent = '';
-  }
+    else statusEl.textContent = '';
+  } else statusEl.textContent = '';
 }
 
 function findBoardWords() {
@@ -342,7 +332,7 @@ function findBoardWords() {
       if (board[r][c]) {
         let word = ''; const cs = [];
         while (c < BOARD_SIZE && board[r][c]) { word += board[r][c]; cs.push({ row: r, col: c }); c++; }
-        if (word.length >= 2) words.push({ word, cells: cs, direction: 'h' });
+        if (word.length >= 2) words.push({ word, cells: cs });
       } else c++;
     }
   }
@@ -352,7 +342,7 @@ function findBoardWords() {
       if (board[r][c]) {
         let word = ''; const cs = [];
         while (r < BOARD_SIZE && board[r][c]) { word += board[r][c]; cs.push({ row: r, col: c }); r++; }
-        if (word.length >= 2) words.push({ word, cells: cs, direction: 'v' });
+        if (word.length >= 2) words.push({ word, cells: cs });
       } else r++;
     }
   }
@@ -388,23 +378,18 @@ function checkConnectivity(tiles) {
 
 function fireConfetti(duration) {
   const canvas = document.getElementById('confetti-canvas');
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
   const ctx = canvas.getContext('2d');
   const particles = [];
   const colors = ['#f1c40f', '#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#e67e22', '#1abc9c'];
 
   for (let i = 0; i < 150; i++) {
     particles.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height - canvas.height,
-      w: Math.random() * 10 + 5,
-      h: Math.random() * 6 + 3,
+      x: Math.random() * canvas.width, y: Math.random() * canvas.height - canvas.height,
+      w: Math.random() * 10 + 5, h: Math.random() * 6 + 3,
       color: colors[Math.floor(Math.random() * colors.length)],
-      vx: (Math.random() - 0.5) * 4,
-      vy: Math.random() * 3 + 2,
-      rot: Math.random() * 360,
-      vr: (Math.random() - 0.5) * 10
+      vx: (Math.random() - 0.5) * 4, vy: Math.random() * 3 + 2,
+      rot: Math.random() * 360, vr: (Math.random() - 0.5) * 10
     });
   }
 
@@ -412,23 +397,13 @@ function fireConfetti(duration) {
   function frame() {
     const elapsed = Date.now() - start;
     if (elapsed > duration) { ctx.clearRect(0, 0, canvas.width, canvas.height); return; }
-
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const fade = elapsed > duration - 500 ? (duration - elapsed) / 500 : 1;
-    ctx.globalAlpha = fade;
-
+    ctx.globalAlpha = elapsed > duration - 500 ? (duration - elapsed) / 500 : 1;
     for (const p of particles) {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.rot += p.vr;
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr;
       if (p.y > canvas.height) { p.y = -10; p.x = Math.random() * canvas.width; }
-
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.rot * Math.PI / 180);
-      ctx.fillStyle = p.color;
-      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-      ctx.restore();
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot * Math.PI / 180);
+      ctx.fillStyle = p.color; ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h); ctx.restore();
     }
     requestAnimationFrame(frame);
   }
@@ -436,54 +411,38 @@ function fireConfetti(duration) {
 }
 
 // ============================================================
-// PEEL — add new tiles
+// PEEL
 // ============================================================
-
-const PEEL_COUNT = 15;
 
 function doPeel() {
   peelCooldown = true;
+  if (pool.length === 0) { peelCooldown = false; return; }
 
-  if (pool.length === 0) {
-    // VICTORY — all 144 tiles placed!
-    fireConfetti(8000);
-    showVictoryScreen();
-    return;
-  }
-
-  // Confetti burst
   fireConfetti(2500);
 
-  // Show PEEL overlay
   const overlay = document.getElementById('peel-overlay');
   overlay.classList.remove('hidden');
   const peelText = overlay.querySelector('.peel-text');
   const count = Math.min(PEEL_COUNT, pool.length);
   peelText.textContent = `PEEL! +${count}`;
-  peelText.style.animation = 'none';
-  peelText.offsetHeight; // reflow
-  peelText.style.animation = '';
-
+  peelText.style.animation = 'none'; peelText.offsetHeight; peelText.style.animation = '';
   setTimeout(() => { overlay.classList.add('hidden'); }, 1200);
 
-  drawTiles(count);
-  updateCounts();
-
+  drawTiles(count); updateCounts();
   document.getElementById('app').classList.add('peel-flash');
   setTimeout(() => document.getElementById('app').classList.remove('peel-flash'), 800);
-
   renderRack();
+
   const rackTiles = document.querySelectorAll('.rack-tile');
-  for (let i = Math.max(0, rackTiles.length - count); i < rackTiles.length; i++) {
-    rackTiles[i].classList.add('tile-new');
-  }
+  for (let i = Math.max(0, rackTiles.length - count); i < rackTiles.length; i++) rackTiles[i].classList.add('tile-new');
 
   scheduleWordSuggestions();
   setTimeout(() => { peelCooldown = false; }, 1500);
 }
 
 function updateCounts() {
-  document.getElementById('tile-count').textContent = `Tiles: ${rack.length + countBoardTiles()}`;
+  const onBoard = countBoardTiles();
+  document.getElementById('tile-count').textContent = `Board: ${onBoard} / ${TILES_TO_WIN}`;
   document.getElementById('pool-count').textContent = `Pool: ${pool.length}`;
 }
 
@@ -496,29 +455,25 @@ function countBoardTiles() {
 }
 
 // ============================================================
-// Victory Screen
+// Victory Screen → Boss Reveal
 // ============================================================
 
 function showVictoryScreen() {
   fireConfetti(8000);
-  const victoryScreen = document.getElementById('victory-screen');
-  victoryScreen.classList.remove('hidden');
+  const vs = document.getElementById('victory-screen');
+  document.getElementById('victory-sub-text').textContent =
+    bossLevel === 0 ? `You placed ${TILES_TO_WIN}+ tiles!` : `Level ${bossLevel} complete!`;
+  vs.classList.remove('hidden');
 
-  // After 3 seconds, fade out victory and reveal boss image
   setTimeout(() => {
-    victoryScreen.style.transition = 'opacity 1.5s ease';
-    victoryScreen.style.opacity = '0';
-
+    vs.style.transition = 'opacity 1.5s ease'; vs.style.opacity = '0';
     setTimeout(() => {
-      victoryScreen.classList.add('hidden');
-      victoryScreen.style.opacity = '';
-      victoryScreen.style.transition = '';
+      vs.classList.add('hidden'); vs.style.opacity = ''; vs.style.transition = '';
       document.getElementById('boss-reveal').classList.remove('hidden');
     }, 1500);
   }, 3000);
 }
 
-// Any click or key on the boss reveal starts the battle
 function handleBossRevealContinue() {
   const reveal = document.getElementById('boss-reveal');
   if (reveal.classList.contains('hidden')) return;
@@ -527,40 +482,46 @@ function handleBossRevealContinue() {
 }
 
 document.getElementById('boss-reveal').addEventListener('click', handleBossRevealContinue);
-document.addEventListener('keydown', (e) => {
-  if (!document.getElementById('boss-reveal').classList.contains('hidden')) {
-    handleBossRevealContinue();
-  }
-});
 
 // ============================================================
-// Boss Battle — Speed Round
+// Boss Battle — Speed Round with Levels
 // ============================================================
 
 let bossLetters = [];
 let bossUsedWords = [];
-let alunHp = 50;
+let bossHp = 50;
 let playerBossHp = 50;
+let bossMaxHp = 50;
+let playerMaxHp = 50;
+let bossMinWordLen = 2;
 let bossTimer = null;
-let bossTimeLeft = 300; // 5 minutes in seconds
-let bossPool = []; // the 144-letter pool for swaps
+let bossTimeLeft = 300;
+let bossPool = [];
 let swapLetterIndex = null;
 
 function startBossBattle() {
-  // Build 50 random letters
+  bossLevel = Math.min(bossLevel + 1, 5);
+  const [bHp, pHp, minLen] = BOSS_LEVELS[bossLevel - 1];
+  bossMaxHp = bHp; playerMaxHp = pHp; bossMinWordLen = minLen;
+  bossHp = bHp; playerBossHp = pHp;
+
+  // Build letters
   const allLetters = [];
   for (const [letter, count] of Object.entries(LETTER_DIST)) {
     for (let i = 0; i < count; i++) allLetters.push(letter);
   }
   shuffle(allLetters);
   bossLetters = allLetters.slice(0, 50);
-  bossPool = allLetters.slice(50); // remaining for swaps
+  bossPool = allLetters.slice(50);
 
   bossUsedWords = [];
-  alunHp = 50;
-  playerBossHp = 50;
   bossTimeLeft = 300;
   swapLetterIndex = null;
+
+  // Update UI
+  document.getElementById('boss-level-display').textContent = `Level ${bossLevel}`;
+  document.getElementById('boss-min-word-len').textContent =
+    bossMinWordLen > 2 ? `Min ${bossMinWordLen} letters` : '';
 
   document.getElementById('boss-battle').classList.remove('hidden');
   renderBossState();
@@ -569,16 +530,14 @@ function startBossBattle() {
   document.getElementById('boss-feedback').textContent = '';
   document.getElementById('boss-feedback').className = 'boss-feedback';
 
-  // Start timer
   updateBossTimer();
   bossTimer = setInterval(() => {
     bossTimeLeft--;
     updateBossTimer();
     if (bossTimeLeft <= 0) {
       clearInterval(bossTimer);
-      // Time's up — check who won
-      if (alunHp <= 0) bossVictory();
-      else bossDefeat('Time ran out! Boss survives with ' + alunHp + ' HP.');
+      if (bossHp <= 0) bossVictory();
+      else bossDefeat(`Time's up. Boss had ${bossHp} HP left.`);
     }
   }, 1000);
 }
@@ -588,18 +547,15 @@ function updateBossTimer() {
   const s = bossTimeLeft % 60;
   const el = document.getElementById('boss-timer');
   el.textContent = `${m}:${s.toString().padStart(2, '0')}`;
-  if (bossTimeLeft <= 30) el.style.animation = 'bossNamePulse 0.5s infinite';
-  else el.style.animation = '';
+  el.style.color = bossTimeLeft <= 30 ? '#ff4444' : '';
 }
 
 function renderBossState() {
-  // HP bars
-  document.getElementById('alun-hp-fill').style.width = `${(alunHp / 50) * 100}%`;
-  document.getElementById('player-hp-fill').style.width = `${(playerBossHp / 50) * 100}%`;
-  document.getElementById('alun-hp-text').textContent = `${alunHp} / 50 HP`;
-  document.getElementById('player-hp-text-boss').textContent = `${playerBossHp} / 50 HP`;
+  document.getElementById('alun-hp-fill').style.width = `${(bossHp / bossMaxHp) * 100}%`;
+  document.getElementById('player-hp-fill').style.width = `${(playerBossHp / playerMaxHp) * 100}%`;
+  document.getElementById('alun-hp-text').textContent = `${bossHp} / ${bossMaxHp} HP`;
+  document.getElementById('player-hp-text-boss').textContent = `${playerBossHp} / ${playerMaxHp} HP`;
 
-  // Letters
   const container = document.getElementById('boss-letters');
   container.innerHTML = '';
   bossLetters.forEach((letter, i) => {
@@ -615,7 +571,6 @@ function renderBossState() {
   });
   document.getElementById('boss-letter-count').textContent = bossLetters.length;
 
-  // Used words
   const usedContainer = document.getElementById('boss-words-used');
   usedContainer.innerHTML = '';
   bossUsedWords.forEach(w => {
@@ -626,68 +581,49 @@ function renderBossState() {
   });
 }
 
-// Submit word
 function bossSubmitWord() {
   const input = document.getElementById('boss-word-input');
   const word = input.value.trim().toUpperCase();
-  input.value = '';
-  input.focus();
-
+  input.value = ''; input.focus();
   if (!word) return;
 
-  // Check if word was already used
-  if (bossUsedWords.some(w => w.word === word)) {
-    showBossFeedback('Already used!', false);
-    return;
-  }
-
-  const fb = document.getElementById('boss-feedback');
+  if (bossUsedWords.some(w => w.word === word)) { showBossFeedback('Already used!', false); return; }
 
   const valid = isValidWord(word);
   const canMake = canMakeFromBossLetters(word);
 
-  if (valid && canMake) {
-    // CORRECT — remove letters, damage Boss
+  if (valid && canMake && word.length >= bossMinWordLen) {
     removeBossLetters(word);
-    alunHp = Math.max(0, alunHp - word.length);
+    bossHp = Math.max(0, bossHp - word.length);
     bossUsedWords.push({ word, valid: true });
-    showBossFeedback(`${word} — ${word.length} damage to Boss!`, true);
+    showBossFeedback(`${word} — ${word.length} damage!`, true);
+  } else if (valid && canMake && word.length < bossMinWordLen) {
+    showBossFeedback(`Too short! Need ${bossMinWordLen}+ letters at this level.`, false);
+    return;
   } else if (!valid) {
-    // NOT A WORD — damage player, keep letters
     playerBossHp = Math.max(0, playerBossHp - word.length);
     bossUsedWords.push({ word, valid: false });
     showBossFeedback(`${word} — not a word! You take ${word.length} damage!`, false);
   } else {
-    // Valid word but missing letters — no damage, just a warning
     showBossFeedback(`You don't have the letters for ${word}`, false);
     return;
   }
 
   renderBossState();
 
-  // Check win/lose
-  if (alunHp <= 0) {
-    clearInterval(bossTimer);
-    setTimeout(() => bossVictory(), 500);
-  } else if (playerBossHp <= 0) {
-    clearInterval(bossTimer);
-    setTimeout(() => bossDefeat('Too many bad words! The boss wins this round.'), 500);
-  }
+  if (bossHp <= 0) { clearInterval(bossTimer); setTimeout(() => bossVictory(), 500); }
+  else if (playerBossHp <= 0) { clearInterval(bossTimer); setTimeout(() => bossDefeat('You ran out of HP.'), 500); }
 }
 
 function canMakeFromBossLetters(word) {
   const available = {};
   bossLetters.forEach(l => { available[l] = (available[l] || 0) + 1; });
-  for (const ch of word) {
-    if (!available[ch] || available[ch] <= 0) return false;
-    available[ch]--;
-  }
+  for (const ch of word) { if (!available[ch] || available[ch] <= 0) return false; available[ch]--; }
   return true;
 }
 
 function removeBossLetters(word) {
-  const toRemove = word.split('');
-  for (const ch of toRemove) {
+  for (const ch of word.split('')) {
     const idx = bossLetters.indexOf(ch);
     if (idx !== -1) bossLetters.splice(idx, 1);
   }
@@ -697,72 +633,251 @@ function showBossFeedback(msg, correct) {
   const fb = document.getElementById('boss-feedback');
   fb.textContent = msg;
   fb.className = 'boss-feedback ' + (correct ? 'correct-fb' : 'incorrect-fb');
-  // Re-trigger animation for incorrect
-  if (!correct) {
-    fb.style.animation = 'none';
-    fb.offsetHeight;
-    fb.style.animation = '';
-  }
+  if (!correct) { fb.style.animation = 'none'; fb.offsetHeight; fb.style.animation = ''; }
 }
 
-// Swap: return 1 selected letter, get 3 new ones
+// Swap
 document.getElementById('boss-swap-btn').addEventListener('click', () => {
-  if (swapLetterIndex === null) {
-    showBossFeedback('Click a letter tile first, then swap', false);
-    return;
-  }
-  if (bossPool.length < 3) {
-    showBossFeedback('Not enough letters in the pool to swap!', false);
-    return;
-  }
-
-  // Remove selected letter, add to pool
+  if (swapLetterIndex === null) { showBossFeedback('Click a letter first, then swap', false); return; }
+  if (bossPool.length < 3) { showBossFeedback('Not enough letters to swap!', false); return; }
   const removed = bossLetters.splice(swapLetterIndex, 1)[0];
-  bossPool.push(removed);
-  shuffle(bossPool);
-
-  // Draw 3
-  for (let i = 0; i < 3 && bossPool.length > 0; i++) {
-    bossLetters.push(bossPool.pop());
-  }
-
+  bossPool.push(removed); shuffle(bossPool);
+  for (let i = 0; i < 3 && bossPool.length > 0; i++) bossLetters.push(bossPool.pop());
   swapLetterIndex = null;
-  showBossFeedback(`Swapped ${removed} for 3 new letters!`, true);
+  showBossFeedback(`Swapped ${removed} for 3 new letters`, true);
   renderBossState();
 });
 
-// Enter to submit
 document.getElementById('boss-word-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); bossSubmitWord(); }
 });
-
 document.getElementById('boss-submit-btn').addEventListener('click', bossSubmitWord);
 
 // Boss Victory
 function bossVictory() {
   document.getElementById('boss-battle').classList.add('hidden');
-  document.getElementById('boss-victory').classList.remove('hidden');
-  fireConfetti(10000);
 
-  const msgs = [
-    'Well played.',
-    'Clean run.',
-    'Not bad at all.'
-  ];
-  document.getElementById('boss-victory-msg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
+  if (bossLevel >= 5) {
+    // FINAL VICTORY — beat all 5 levels
+    showFinalVictory();
+    return;
+  }
+
+  // Level up — show victory then go back to board game
+  const bv = document.getElementById('boss-victory');
+  bv.classList.remove('hidden');
+  fireConfetti(10000);
+  document.getElementById('boss-victory-msg').textContent = `Level ${bossLevel} cleared.`;
+  document.getElementById('boss-next-action').textContent = 'Next Round';
+  document.getElementById('boss-next-action').onclick = () => {
+    bv.classList.add('hidden');
+    // Reset board for next round
+    pool = []; buildPool(); board = []; buildBoard();
+    rack = []; drawTiles(STARTING_TILES);
+    peelCooldown = false;
+    renderBoard(); renderRack(); updateCounts(); scheduleWordSuggestions();
+  };
 }
 
-// Boss Defeat
 function bossDefeat(reason) {
   document.getElementById('boss-battle').classList.add('hidden');
   document.getElementById('boss-defeat').classList.remove('hidden');
+  document.getElementById('boss-defeat-msg').textContent = reason;
+}
 
-  const msgs = [
-    `${reason}`,
-    `${reason}`,
-    `${reason}`
-  ];
-  document.getElementById('boss-defeat-msg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
+// ============================================================
+// Final Victory — After Level 5
+// ============================================================
+
+function showFinalVictory() {
+  fireConfetti(12000);
+  const fv = document.getElementById('final-victory');
+  fv.classList.remove('hidden');
+
+  // After 4 seconds, fade to Continue? image
+  setTimeout(() => {
+    fv.style.transition = 'opacity 2s ease'; fv.style.opacity = '0';
+    setTimeout(() => {
+      fv.classList.add('hidden'); fv.style.opacity = ''; fv.style.transition = '';
+      document.getElementById('final-continue').classList.remove('hidden');
+    }, 2000);
+  }, 4000);
+}
+
+// Click/key on final continue → Word Rain endgame
+document.getElementById('final-continue').addEventListener('click', () => {
+  document.getElementById('final-continue').classList.add('hidden');
+  startWordRain();
+});
+
+// ============================================================
+// ENDGAME: Word Rain — survival mode
+// ============================================================
+// Words fall from the top. Type them before they reach the bottom.
+// Each word shows its definition. Speed increases. 3 lives.
+// Score = words caught. High score tracked.
+
+let rainActive = false;
+let rainWords = [];
+let rainScore = 0;
+let rainLives = 3;
+let rainSpeed = 1;
+let rainSpawnInterval = null;
+let rainAnimFrame = null;
+let rainLastFrame = 0;
+
+function startWordRain() {
+  if (!dictionary) return;
+
+  rainActive = true;
+  rainWords = [];
+  rainScore = 0;
+  rainLives = 3;
+  rainSpeed = 1;
+
+  const el = document.getElementById('word-rain');
+  el.classList.remove('hidden');
+  document.getElementById('rain-score').textContent = '0';
+  document.getElementById('rain-lives').textContent = '❤️❤️❤️';
+  document.getElementById('rain-input').value = '';
+  document.getElementById('rain-input').focus();
+
+  const canvas = document.getElementById('rain-canvas');
+  canvas.width = canvas.parentElement.clientWidth;
+  canvas.height = canvas.parentElement.clientHeight - 80;
+
+  // Spawn words periodically
+  rainSpawnInterval = setInterval(() => {
+    if (!rainActive) return;
+    spawnRainWord(canvas);
+  }, Math.max(800, 2500 - rainScore * 30));
+
+  spawnRainWord(canvas);
+
+  rainLastFrame = Date.now();
+  rainAnimFrame = requestAnimationFrame(() => rainLoop(canvas));
+}
+
+function getRandomDictWord() {
+  const keys = Object.keys(dictionary);
+  // Prefer shorter words (3-8 letters)
+  let word;
+  for (let tries = 0; tries < 20; tries++) {
+    word = keys[Math.floor(Math.random() * keys.length)];
+    if (word.length >= 3 && word.length <= 8) break;
+  }
+  return word;
+}
+
+function spawnRainWord(canvas) {
+  const word = getRandomDictWord();
+  const def = dictionary[word] || '';
+  const shortDef = def.length > 40 ? def.substring(0, 37) + '...' : def;
+  rainWords.push({
+    word,
+    def: shortDef,
+    x: 40 + Math.random() * (canvas.width - 200),
+    y: -20,
+    speed: (0.3 + Math.random() * 0.3) * rainSpeed
+  });
+}
+
+function rainLoop(canvas) {
+  if (!rainActive) return;
+
+  const ctx = canvas.getContext('2d');
+  const now = Date.now();
+  const dt = now - rainLastFrame;
+  rainLastFrame = now;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Update & draw words
+  for (let i = rainWords.length - 1; i >= 0; i--) {
+    const w = rainWords[i];
+    w.y += w.speed * dt * 0.06;
+
+    // Draw word
+    ctx.font = 'bold 18px "Courier New", monospace';
+    ctx.fillStyle = '#e0e0e0';
+    ctx.fillText(w.word, w.x, w.y);
+
+    // Draw definition below
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = '#666';
+    ctx.fillText(w.def, w.x, w.y + 16);
+
+    // Hit bottom
+    if (w.y > canvas.height) {
+      rainWords.splice(i, 1);
+      rainLives--;
+      updateRainLives();
+      if (rainLives <= 0) { endWordRain(); return; }
+    }
+  }
+
+  // Speed up over time
+  rainSpeed = 1 + rainScore * 0.05;
+
+  // Adjust spawn rate
+  clearInterval(rainSpawnInterval);
+  rainSpawnInterval = setInterval(() => {
+    if (rainActive) spawnRainWord(canvas);
+  }, Math.max(600, 2500 - rainScore * 40));
+
+  rainAnimFrame = requestAnimationFrame(() => rainLoop(canvas));
+}
+
+function updateRainLives() {
+  document.getElementById('rain-lives').textContent = '❤️'.repeat(Math.max(0, rainLives));
+}
+
+// Type to catch words
+document.getElementById('rain-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    const input = document.getElementById('rain-input');
+    const typed = input.value.trim().toUpperCase();
+    input.value = '';
+
+    if (!typed) return;
+
+    // Find matching word
+    const idx = rainWords.findIndex(w => w.word === typed);
+    if (idx !== -1) {
+      rainWords.splice(idx, 1);
+      rainScore++;
+      document.getElementById('rain-score').textContent = rainScore;
+    }
+  }
+});
+
+function endWordRain() {
+  rainActive = false;
+  clearInterval(rainSpawnInterval);
+  cancelAnimationFrame(rainAnimFrame);
+
+  const canvas = document.getElementById('rain-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Show final score
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 48px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${rainScore} words`, canvas.width / 2, canvas.height / 2 - 20);
+  ctx.font = '20px sans-serif';
+  ctx.fillStyle = '#888';
+  ctx.fillText('Press Enter to play again', canvas.width / 2, canvas.height / 2 + 30);
+
+  document.getElementById('rain-input').addEventListener('keydown', function retry(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('rain-input').removeEventListener('keydown', retry);
+      document.getElementById('word-rain').classList.add('hidden');
+      startWordRain();
+    }
+  });
 }
 
 // ============================================================
@@ -776,7 +891,6 @@ function scheduleWordSuggestions() {
 
 function updateWordSuggestions() {
   if (!dictionary) return;
-
   const allLetters = [...rack];
 
   if (allLetters.length === 0) {
@@ -791,33 +905,23 @@ function updateWordSuggestions() {
   const results = [];
   for (const word of Object.keys(dictionary)) {
     if (word.length < 2 || word.length > allLetters.length) continue;
-    if (canMakeWord(word, available)) {
-      results.push({ word, definition: dictionary[word], length: word.length });
-    }
+    if (canMakeWord(word, available)) results.push({ word, definition: dictionary[word], length: word.length });
   }
-
   results.sort((a, b) => a.length - b.length || a.word.localeCompare(b.word));
   renderWordSuggestions(results);
 }
 
 function canMakeWord(word, available) {
   const needed = {};
-  for (const ch of word) {
-    needed[ch] = (needed[ch] || 0) + 1;
-    if (needed[ch] > (available[ch] || 0)) return false;
-  }
+  for (const ch of word) { needed[ch] = (needed[ch] || 0) + 1; if (needed[ch] > (available[ch] || 0)) return false; }
   return true;
 }
 
 function renderWordSuggestions(results) {
   const container = document.getElementById('word-list');
   document.getElementById('word-count-label').textContent = `${results.length.toLocaleString()} possible words from rack`;
-
   const groups = {};
-  for (const r of results) {
-    if (!groups[r.length]) groups[r.length] = [];
-    groups[r.length].push(r);
-  }
+  for (const r of results) { if (!groups[r.length]) groups[r.length] = []; groups[r.length].push(r); }
 
   let html = '';
   for (const len of Object.keys(groups).sort((a, b) => a - b)) {
@@ -829,7 +933,6 @@ function renderWordSuggestions(results) {
       html += `<div class="word-item"><div class="word-item-word">${item.word}</div><div class="word-item-def">${shortDef}</div></div>`;
     }
   }
-
   container.innerHTML = html;
 }
 
@@ -838,87 +941,73 @@ function renderWordSuggestions(results) {
 // ============================================================
 
 document.addEventListener('keydown', (e) => {
-  // Don't intercept if boss battle input is focused or an overlay is visible
   if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
-  if (!document.getElementById('boss-battle').classList.contains('hidden')) return;
-  if (!document.getElementById('victory-screen').classList.contains('hidden')) return;
+  // Block if any overlay is open
+  const overlays = ['boss-battle', 'victory-screen', 'boss-reveal', 'boss-victory',
+                    'boss-defeat', 'final-victory', 'final-continue', 'word-rain'];
+  for (const id of overlays) {
+    if (!document.getElementById(id).classList.contains('hidden')) {
+      // Boss reveal: any key continues
+      if (id === 'boss-reveal') handleBossRevealContinue();
+      // Final continue: any key continues
+      if (id === 'final-continue') {
+        document.getElementById('final-continue').classList.add('hidden');
+        startWordRain();
+      }
+      return;
+    }
+  }
 
   const key = e.key;
 
-  // Arrow keys — move cursor
   if (key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight') {
-    e.preventDefault();
-    boardFocused = true;
+    e.preventDefault(); boardFocused = true;
     if (key === 'ArrowUp') cursorRow = Math.max(0, cursorRow - 1);
     if (key === 'ArrowDown') cursorRow = Math.min(BOARD_SIZE - 1, cursorRow + 1);
     if (key === 'ArrowLeft') cursorCol = Math.max(0, cursorCol - 1);
     if (key === 'ArrowRight') cursorCol = Math.min(BOARD_SIZE - 1, cursorCol + 1);
     renderBoard();
-    // Scroll cursor into view
-    const idx = cursorRow * BOARD_SIZE + cursorCol;
     const cells = document.querySelectorAll('.cell');
-    if (cells[idx]) cells[idx].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    cells[cursorRow * BOARD_SIZE + cursorCol]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     return;
   }
 
-  // Letter key — place tile from rack at cursor
   if (/^[a-zA-Z]$/.test(key) && boardFocused) {
     e.preventDefault();
     const letter = key.toUpperCase();
     const rackIdx = rack.indexOf(letter);
-    if (rackIdx === -1) return; // don't have that letter
+    if (rackIdx === -1) return;
 
     if (board[cursorRow][cursorCol] === null) {
-      // Place letter
-      board[cursorRow][cursorCol] = letter;
-      rack.splice(rackIdx, 1);
-      // Auto-advance cursor right
+      board[cursorRow][cursorCol] = letter; rack.splice(rackIdx, 1);
       if (cursorCol < BOARD_SIZE - 1) cursorCol++;
-      selectedTile = null;
-      renderBoard(); renderRack(); scheduleWordSuggestions();
+      selectedTile = null; renderBoard(); renderRack(); scheduleWordSuggestions();
     } else if (board[cursorRow][cursorCol] !== letter) {
-      // Swap: pick up board tile, place typed letter
       const existing = board[cursorRow][cursorCol];
-      board[cursorRow][cursorCol] = letter;
-      rack.splice(rackIdx, 1);
-      rack.push(existing);
+      board[cursorRow][cursorCol] = letter; rack.splice(rackIdx, 1); rack.push(existing);
       if (cursorCol < BOARD_SIZE - 1) cursorCol++;
-      selectedTile = null;
-      renderBoard(); renderRack(); scheduleWordSuggestions();
+      selectedTile = null; renderBoard(); renderRack(); scheduleWordSuggestions();
     }
     return;
   }
 
-  // Backspace / Delete — pick up tile at cursor back to rack
   if ((key === 'Backspace' || key === 'Delete') && boardFocused) {
     e.preventDefault();
     if (board[cursorRow][cursorCol]) {
-      rack.push(board[cursorRow][cursorCol]);
-      board[cursorRow][cursorCol] = null;
+      rack.push(board[cursorRow][cursorCol]); board[cursorRow][cursorCol] = null;
       if (key === 'Backspace' && cursorCol > 0) cursorCol--;
-      selectedTile = null;
-      renderBoard(); renderRack(); scheduleWordSuggestions();
+      selectedTile = null; renderBoard(); renderRack(); scheduleWordSuggestions();
     } else if (key === 'Backspace' && cursorCol > 0) {
       cursorCol--;
       if (board[cursorRow][cursorCol]) {
-        rack.push(board[cursorRow][cursorCol]);
-        board[cursorRow][cursorCol] = null;
-        selectedTile = null;
-        renderBoard(); renderRack(); scheduleWordSuggestions();
-      } else {
-        renderBoard();
-      }
+        rack.push(board[cursorRow][cursorCol]); board[cursorRow][cursorCol] = null;
+        selectedTile = null; renderBoard(); renderRack(); scheduleWordSuggestions();
+      } else renderBoard();
     }
     return;
   }
 
-  // Escape — deselect / unfocus board
-  if (key === 'Escape') {
-    boardFocused = false;
-    selectedTile = null;
-    renderBoard();
-    return;
-  }
+  if (key === 'Escape') { boardFocused = false; selectedTile = null; renderBoard(); }
 });
 
 // ============================================================
