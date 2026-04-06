@@ -669,11 +669,6 @@ function startBossBattle() {
 
   setHeaderMode('boss');
   document.getElementById('boss-battle').classList.remove('hidden');
-  const bossNameEl = document.getElementById('boss-player-name');
-  const bTotalE = parseInt(localStorage.getItem('sg-total-earned') || '0');
-  const bLvl = Math.floor(bTotalE / 100) + 1;
-  bossNameEl.textContent = playerName;
-  bossNameEl.style.fontSize = Math.min(3, 0.3 + bLvl * 0.25) + 'rem';
   renderBossState();
   document.getElementById('boss-word-input').value = '';
   document.getElementById('boss-word-input').focus();
@@ -981,13 +976,6 @@ function startSentenceGame() {
   document.getElementById('sentence-game').classList.remove('hidden');
   document.getElementById('sg-score').textContent = '0';
   document.getElementById('sg-correction-panel').classList.add('hidden');
-
-  // Show name with level-based font size
-  const nameEl = document.getElementById('sg-player-name');
-  const totalE = parseInt(localStorage.getItem('sg-total-earned') || '0');
-  const lvl = Math.floor(totalE / 100) + 1;
-  nameEl.textContent = playerName;
-  nameEl.style.fontSize = Math.min(3, 0.3 + lvl * 0.25) + 'rem';
 
   updateSkillDisplay();
   document.getElementById('sg-mastered-count').textContent = sgMasteredWords.length;
@@ -1992,8 +1980,8 @@ document.getElementById('dev-skip-49').addEventListener('click', () => {
 function updatePlayerNameDisplay() {
   const totalSkillPoints = parseInt(localStorage.getItem('sg-total-earned') || '0');
   const level = Math.floor(totalSkillPoints / 100) + 1;
-  // Font size: minimum 0.5rem, grows with level, caps at 3rem
-  const fontSize = Math.min(3, 0.3 + level * 0.25);
+  // Font size: 1rem + 1% per skill level
+  const fontSize = 1 + (level * 0.01);
   const nameBar = document.getElementById('player-name-bar');
   nameBar.textContent = playerName;
   nameBar.style.fontSize = fontSize + 'rem';
