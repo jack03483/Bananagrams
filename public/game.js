@@ -305,8 +305,8 @@ function validateBoard() {
   const noFloating = tilesOnBoard.every(t => isPartOfWord(t.r, t.c));
   const rackEmpty = rack.length === 0;
 
-  // Check win: >= TILES_TO_WIN on board, all valid, connected, no floaters
-  if (tilesOnBoard.length >= TILES_TO_WIN && rackEmpty && connected && allValid && hasWords && noFloating && !peelCooldown) {
+  // Check win: >= TILES_TO_WIN on board, all valid, connected, no floaters (rack doesn't need to be empty)
+  if (tilesOnBoard.length >= TILES_TO_WIN && connected && allValid && hasWords && noFloating && !peelCooldown) {
     peelCooldown = true;
     fireConfetti(8000);
     showVictoryScreen();
