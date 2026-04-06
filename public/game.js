@@ -294,18 +294,6 @@ function validateBoard() {
 
   const masteredSet = new Set(JSON.parse(localStorage.getItem('sg-mastered') || '[]'));
 
-  let allValid = true, hasWords = false;
-  for (const w of words) {
-    hasWords = true;
-    const valid = isValidWord(w.word);
-    if (!valid) allValid = false;
-    const mastered = masteredSet.has(w.word);
-    for (const pos of w.cells) {
-      const cls = mastered ? 'mastered-word' : (valid ? 'valid-word' : 'invalid-word');
-      cells[pos.row * BOARD_SIZE + pos.col].classList.add(cls);
-    }
-  }
-
   const tilesOnBoard = [];
   for (let r = 0; r < BOARD_SIZE; r++)
     for (let c = 0; c < BOARD_SIZE; c++)
@@ -313,6 +301,58 @@ function validateBoard() {
 
   const connected = tilesOnBoard.length > 0 ? checkConnectivity(tilesOnBoard) : true;
   const noFloating = tilesOnBoard.every(t => isPartOfWord(t.r, t.c));
+
+  // Determine which cells are in the main connected group
+  let connectedCells = new Set();
+  if (tilesOnBoard.length > 0) {
+    const key = (r, c) => `${r},${c}`;
+    const tileSet = new Set(tilesOnBoard.map(t => key(t.r, t.c)));
+    const visited = new Set();
+    const queue = [tilesOnBoard[0]];
+    visited.add(key(tilesOnBoard[0].r, tilesOnBoard[0].c));
+    while (queue.length > 0) {
+      const { r, c } = queue.shift();
+      for (const n of [{ r: r-1, c }, { r: r+1, c }, { r, c: c-1 }, { r, c: c+1 }]) {
+        const k = key(n.r, n.c);
+        if (tileSet.has(k) && !visited.has(k)) { visited.add(k); queue.push(n); }
+      }
+    }
+    connectedCells = visited;
+  }
+
+  let allValid = true, hasWords = false;
+  const wordStatuses = [];
+
+  for (const w of words) {
+    hasWords = true;
+    const valid = isValidWord(w.word);
+    if (!valid) allValid = false;
+    const mastered = masteredSet.has(w.word);
+    const wordConnected = w.cells.every(pos => connectedCells.has(`${pos.row},${pos.col}`));
+
+    let status, cls;
+    if (!valid) { status = 'invalid'; cls = 'invalid-word'; }
+    else if (mastered) { status = 'mastered'; cls = 'mastered-word'; }
+    else if (!wordConnected) { status = 'disconnected'; cls = 'valid-word'; }
+    else { status = 'valid'; cls = 'valid-word'; }
+
+    for (const pos of w.cells) cells[pos.row * BOARD_SIZE + pos.col].classList.add(cls);
+    if (mastered) for (const pos of w.cells) cells[pos.row * BOARD_SIZE + pos.col].classList.add('mastered-word');
+
+    wordStatuses.push({ word: w.word, status });
+  }
+
+  // Update word status panel
+  const panel = document.getElementById('word-status-panel');
+  const seen = new Set();
+  let panelHtml = '';
+  for (const ws of wordStatuses) {
+    if (seen.has(ws.word)) continue;
+    seen.add(ws.word);
+    const cssClass = 'ws-' + ws.status;
+    panelHtml += `<div class="ws-word ${cssClass}">${ws.word.toLowerCase()}</div>`;
+  }
+  panel.innerHTML = panelHtml;
   const rackEmpty = rack.length === 0;
 
   // Check win: >= TILES_TO_WIN on board, all valid, connected, no floaters (rack doesn't need to be empty)
