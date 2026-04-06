@@ -642,6 +642,15 @@ function bossSubmitWord() {
   const valid = isValidWord(word);
   const canMake = canMakeFromBossLetters(word);
 
+  // Show definition above timer
+  const defEl = document.getElementById('boss-last-def');
+  if (valid) {
+    const def = getDefinition(word);
+    defEl.innerHTML = `<strong>${word}</strong>: ${def || 'valid word'}`;
+  } else {
+    defEl.innerHTML = `<strong>${word}</strong>: not in dictionary`;
+  }
+
   if (valid && canMake && word.length >= bossMinWordLen) {
     removeBossLetters(word);
     bossHp = Math.max(0, bossHp - word.length);
@@ -773,8 +782,8 @@ document.getElementById('final-continue').addEventListener('click', () => {
 
 const TETRIS_COLS = 10;
 const TETRIS_ROWS = 16;
-const TETRIS_CELL = 36;
-const TETRIS_WIN_SCORE = 10000;
+const TETRIS_CELL = 44;
+const TETRIS_WIN_SCORE = 1000;
 
 let tetrisGrid = [];
 let tetrisActive = false;
@@ -810,8 +819,12 @@ function startWordTetris() {
   el.classList.remove('hidden');
 
   const canvas = document.getElementById('tetris-canvas');
-  canvas.width = TETRIS_COLS * TETRIS_CELL;
-  canvas.height = TETRIS_ROWS * TETRIS_CELL;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = TETRIS_COLS * TETRIS_CELL * dpr;
+  canvas.height = TETRIS_ROWS * TETRIS_CELL * dpr;
+  canvas.style.width = TETRIS_COLS * TETRIS_CELL + 'px';
+  canvas.style.height = TETRIS_ROWS * TETRIS_CELL + 'px';
+  canvas.getContext('2d').scale(dpr, dpr);
 
   document.getElementById('tetris-score').textContent = '0';
   document.getElementById('tetris-speed').textContent = '1';
@@ -858,36 +871,87 @@ function tetrisLoop() {
   tetrisAnimFrame = requestAnimationFrame(tetrisLoop);
 }
 
+function findBestWord(letters, positions) {
+  // Given a string of letters and their positions, find the longest valid word substring
+  let bestWord = null;
+  let bestStart = -1;
+  let bestLen = 0;
+
+  for (let start = 0; start < letters.length; start++) {
+    for (let end = start + 2; end <= letters.length; end++) {
+      const sub = letters.substring(start, end);
+      if (sub.length > bestLen && isValidWord(sub)) {
+        bestWord = sub;
+        bestStart = start;
+        bestLen = sub.length;
+      }
+    }
+  }
+
+  if (!bestWord) return null;
+  return { word: bestWord, positions: positions.slice(bestStart, bestStart + bestLen) };
+}
+
 function checkTetrisWords() {
   let cleared = true;
   while (cleared) {
     cleared = false;
+
+    // Check horizontal sequences
     for (let r = 0; r < TETRIS_ROWS; r++) {
-      // Find all horizontal words in this row
       let c = 0;
       while (c < TETRIS_COLS) {
         if (tetrisGrid[r][c]) {
-          let word = '';
+          let letters = '';
+          let positions = [];
           let startC = c;
           while (c < TETRIS_COLS && tetrisGrid[r][c]) {
-            word += tetrisGrid[r][c];
+            letters += tetrisGrid[r][c];
+            positions.push({ r, c });
             c++;
           }
-          if (word.length >= 2 && isValidWord(word)) {
-            // Clear these cells
-            for (let i = startC; i < startC + word.length; i++) tetrisGrid[r][i] = null;
-            tetrisScore += word.length * word.length;
-            cleared = true;
+          if (letters.length >= 2) {
+            const found = findBestWord(letters, positions);
+            if (found) {
+              for (const pos of found.positions) tetrisGrid[pos.r][pos.c] = null;
+              // Exponential scoring: 2^length
+              tetrisScore += Math.pow(2, found.word.length);
+              cleared = true;
+            }
           }
         } else c++;
       }
     }
+
+    // Check vertical sequences
+    for (let c = 0; c < TETRIS_COLS; c++) {
+      let r = 0;
+      while (r < TETRIS_ROWS) {
+        if (tetrisGrid[r][c]) {
+          let letters = '';
+          let positions = [];
+          while (r < TETRIS_ROWS && tetrisGrid[r][c]) {
+            letters += tetrisGrid[r][c];
+            positions.push({ r, c });
+            r++;
+          }
+          if (letters.length >= 2) {
+            const found = findBestWord(letters, positions);
+            if (found) {
+              for (const pos of found.positions) tetrisGrid[pos.r][pos.c] = null;
+              tetrisScore += Math.pow(2, found.word.length);
+              cleared = true;
+            }
+          }
+        } else r++;
+      }
+    }
+
     if (cleared) applyTetrisGravity();
   }
 
-  // Update score and speed
   document.getElementById('tetris-score').textContent = tetrisScore.toLocaleString();
-  tetrisSpeed = Math.floor(tetrisScore / 500) + 1;
+  tetrisSpeed = Math.floor(tetrisScore / 100) + 1;
   document.getElementById('tetris-speed').textContent = tetrisSpeed;
 
   // Check win
@@ -915,8 +979,9 @@ function renderTetris() {
   const canvas = document.getElementById('tetris-canvas');
   const ctx = canvas.getContext('2d');
   const S = TETRIS_CELL;
+  const W = TETRIS_COLS * S, H = TETRIS_ROWS * S;
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, W, H);
 
   // Draw grid
   for (let r = 0; r < TETRIS_ROWS; r++) {
