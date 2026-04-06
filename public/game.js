@@ -795,7 +795,7 @@ let tetrisSpeed = 1;
 let tetrisLastDrop = 0;
 let tetrisAnimFrame = null;
 
-const TETRIS_LETTERS = 'AAABCDEEEFGHIIIJKLMNOOPQRSTUUVWXYZ';
+const TETRIS_LETTERS = 'AAAAAEEEEEIIIIOOOOUUUAAEEIIOOBCDDFFGGHHJKLLMMNNPPRRSSTTWY';
 
 function randomTetrisLetter() {
   return TETRIS_LETTERS[Math.floor(Math.random() * TETRIS_LETTERS.length)];
@@ -987,10 +987,12 @@ function renderTetris() {
   for (let r = 0; r < TETRIS_ROWS; r++) {
     for (let c = 0; c < TETRIS_COLS; c++) {
       const x = c * S, y = r * S;
+      roundRect(ctx, x + 1, y + 1, S - 2, S - 2, 4);
       ctx.fillStyle = '#14141e';
-      ctx.fillRect(x, y, S, S);
-      ctx.strokeStyle = '#1e1e30';
-      ctx.strokeRect(x + 0.5, y + 0.5, S - 1, S - 1);
+      ctx.fill();
+      ctx.strokeStyle = '#1c1c2e';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
 
       if (tetrisGrid[r][c]) {
         drawTetrisTile(ctx, x, y, S, tetrisGrid[r][c]);
@@ -1014,22 +1016,37 @@ function renderTetris() {
   }
 }
 
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
 function drawTetrisTile(ctx, x, y, s, letter) {
-  const m = 2;
+  const m = 2, r = 5;
+  // Tile body
+  roundRect(ctx, x + m, y + m, s - m * 2, s - m * 2, r);
   ctx.fillStyle = '#f7e8c8';
-  ctx.fillRect(x + m, y + m, s - m * 2, s - m * 2);
-  // Top highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.25)';
-  ctx.fillRect(x + m, y + m, s - m * 2, 3);
-  // Bottom shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.15)';
-  ctx.fillRect(x + m, y + s - m - 3, s - m * 2, 3);
-  // Border
+  ctx.fill();
   ctx.strokeStyle = '#d4b070';
-  ctx.strokeRect(x + m + 0.5, y + m + 0.5, s - m * 2 - 1, s - m * 2 - 1);
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Top highlight
+  ctx.save();
+  roundRect(ctx, x + m, y + m, s - m * 2, s - m * 2, r);
+  ctx.clip();
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.fillRect(x + m, y + m, s - m * 2, 4);
+  ctx.fillStyle = 'rgba(0,0,0,0.12)';
+  ctx.fillRect(x + m, y + s - m - 4, s - m * 2, 4);
+  ctx.restore();
   // Letter
   ctx.fillStyle = '#2c1810';
-  ctx.font = `bold ${s * 0.5}px Georgia, serif`;
+  ctx.font = `bold ${s * 0.48}px Georgia, serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(letter, x + s / 2, y + s / 2 + 1);
