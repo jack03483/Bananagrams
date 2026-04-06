@@ -785,6 +785,8 @@ let sgMasteredWords = JSON.parse(localStorage.getItem('sg-mastered') || '[]');
 let sgDictKeys = [];
 
 let sgCorrecting = false;
+let sgHintsUsed = 0;
+let sgRevealedLetters = [];
 
 function generateSentence(word, def) {
   const w = word.toLowerCase();
@@ -846,6 +848,12 @@ function startSentenceGame() {
   nextSentence();
 }
 
+function buildBlankDisplay(word, revealed) {
+  return word.split('').map((ch, i) =>
+    revealed.includes(i) ? `<span class="sg-revealed-letter">${ch}</span>` : '_'
+  ).join(' ');
+}
+
 function nextSentence() {
   const masteredSet = new Set(sgMasteredWords);
   let word, def;
@@ -856,11 +864,14 @@ function nextSentence() {
   def = dictionary[word];
   sgCurrentWord = word;
   sgCorrecting = false;
+  sgHintsUsed = 0;
+
+  // Start with first letter revealed
+  sgRevealedLetters = [0];
 
   const sentence = generateSentence(word, def);
   document.getElementById('sg-sentence').innerHTML = sentence;
-  document.getElementById('sg-hint').innerHTML =
-    `<strong>${word.length} letters</strong> &mdash; ${def}`;
+  updateHintDisplay();
   document.getElementById('sg-feedback').textContent = '';
   document.getElementById('sg-feedback').className = 'sg-feedback';
   document.getElementById('sg-correction-panel').classList.add('hidden');
@@ -868,6 +879,71 @@ function nextSentence() {
   document.getElementById('sg-input').disabled = false;
   document.getElementById('sg-input').focus();
   document.getElementById('sg-streak').textContent = sgStreak > 0 ? `Streak: ${sgStreak}` : '';
+}
+
+function updateHintDisplay() {
+  const word = sgCurrentWord;
+  const def = dictionary[word];
+
+  // Build the letter reveal
+  const letterDisplay = buildBlankDisplay(word, sgRevealedLetters);
+
+  // Build extra hints based on how many hints used
+  let extraHints = '';
+
+  if (sgHintsUsed >= 1) {
+    // Reveal last letter too
+    if (!sgRevealedLetters.includes(word.length - 1)) {
+      sgRevealedLetters.push(word.length - 1);
+    }
+    extraHints += `<div class="sg-extra-hint">Starts with <strong>${word[0]}</strong>, ends with <strong>${word[word.length-1]}</strong></div>`;
+  }
+
+  if (sgHintsUsed >= 2) {
+    // Reveal a middle letter
+    const mid = Math.floor(word.length / 2);
+    if (!sgRevealedLetters.includes(mid)) sgRevealedLetters.push(mid);
+    // Show what it rhymes with (find a rhyming word)
+    const ending = word.slice(-3);
+    const rhyme = sgDictKeys.find(w => w !== word && w.endsWith(ending) && w.length <= 8);
+    if (rhyme) extraHints += `<div class="sg-extra-hint">Rhymes with <strong>${rhyme.toLowerCase()}</strong></div>`;
+  }
+
+  if (sgHintsUsed >= 3) {
+    // Reveal more letters
+    for (let i = 1; i < word.length - 1; i += 2) {
+      if (!sgRevealedLetters.includes(i)) { sgRevealedLetters.push(i); break; }
+    }
+    // Show number of vowels
+    const vowels = word.split('').filter(c => 'AEIOU'.includes(c)).length;
+    extraHints += `<div class="sg-extra-hint">Contains <strong>${vowels}</strong> vowel${vowels !== 1 ? 's' : ''}</div>`;
+  }
+
+  if (sgHintsUsed >= 4) {
+    // Reveal even more
+    for (let i = 2; i < word.length - 1; i++) {
+      if (!sgRevealedLetters.includes(i)) { sgRevealedLetters.push(i); break; }
+    }
+    // Scrambled letters hint
+    const scrambled = word.split('').sort(() => Math.random() - 0.5).join('').toLowerCase();
+    extraHints += `<div class="sg-extra-hint">Scrambled: <strong>${scrambled}</strong></div>`;
+  }
+
+  const updatedBlank = buildBlankDisplay(word, sgRevealedLetters);
+
+  document.getElementById('sg-hint').innerHTML =
+    `<div class="sg-hint-letters">${updatedBlank}</div>` +
+    `<div class="sg-hint-def"><strong>${word.length} letters</strong> &mdash; ${def}</div>` +
+    extraHints +
+    `<button type="button" id="sg-hint-btn" class="sg-hint-btn">Hint (${sgHintsUsed}/4)</button>`;
+
+  // Re-bind hint button
+  document.getElementById('sg-hint-btn').addEventListener('click', () => {
+    if (sgHintsUsed < 4) {
+      sgHintsUsed++;
+      updateHintDisplay();
+    }
+  });
 }
 
 function showCorrectionPanel() {

@@ -937,7 +937,52 @@ body {
   font-size: 0.85rem;
   color: var(--text-muted);
   margin-bottom: 1.5rem;
+}
+
+.sg-hint-letters {
+  font-family: 'Courier New', monospace;
+  font-size: 1.6rem;
+  letter-spacing: 0.25em;
+  color: var(--text);
+  margin-bottom: 0.75rem;
+}
+
+.sg-revealed-letter {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.sg-hint-def {
   font-style: italic;
+  margin-bottom: 0.5rem;
+}
+
+.sg-extra-hint {
+  font-size: 0.8rem;
+  color: #7799bb;
+  margin: 0.25rem 0;
+}
+
+.sg-extra-hint strong {
+  color: var(--text);
+}
+
+.sg-hint-btn {
+  margin-top: 0.5rem;
+  padding: 0.3rem 0.8rem;
+  background: rgba(93, 173, 226, 0.12);
+  color: #5dade2;
+  border: 1px solid rgba(93, 173, 226, 0.3);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sg-hint-btn:hover {
+  background: rgba(93, 173, 226, 0.25);
+  border-color: #5dade2;
 }
 
 .sg-form {
