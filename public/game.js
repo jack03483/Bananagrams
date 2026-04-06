@@ -1024,6 +1024,9 @@ document.getElementById('sg-form').addEventListener('submit', (e) => {
     return;
   }
 
+  // Prevent double-submit while transitioning
+  if (document.getElementById('sg-input').disabled) return;
+
   const fb = document.getElementById('sg-feedback');
 
   if (answer === sgCurrentWord) {
@@ -1051,6 +1054,7 @@ document.getElementById('sg-form').addEventListener('submit', (e) => {
     document.getElementById('sg-score').textContent = sgScore;
     updateSkillDisplay();
 
+    document.getElementById('sg-input').disabled = true;
     fb.textContent = `Correct!  +${sgCurrentWord.length} points`;
     fb.className = 'sg-feedback sg-correct';
 
@@ -1188,9 +1192,7 @@ function refreshSearchSuggestions() {
   const candidates = [];
   for (const word of Object.keys(dictionary)) {
     if (masteredSet.has(word)) continue;
-    if (word.length < 3 || word.length > 7) continue;
-    const def = dictionary[word];
-    if (!def || def.length > 60) continue; // short definitions = common words
+    if (word.length < 3 || word.length > 8) continue;
     candidates.push(word);
   }
 
