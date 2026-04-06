@@ -11,10 +11,17 @@
     <header id="top-bar">
       <h1>🍌 Bananagrams</h1>
       <div id="player-name-bar" class="player-name-bar"></div>
+      <div id="game-level-display" class="game-level-display hidden"></div>
       <div id="game-info">
         <span id="tile-count">Board: 0 / 100</span>
         <span id="pool-count">Pool: 129</span>
         <span id="status-msg"></span>
+      </div>
+      <div class="sg-skill-bar-wrap" id="sg-skill-btn" title="Click to search & master words">
+        <div class="sg-skill-label">SKILL <span id="sg-skill-level">1</span></div>
+        <div class="sg-skill-bar"><div id="sg-skill-fill" class="sg-skill-fill"></div></div>
+        <span id="sg-skill-badge" class="sg-skill-badge hidden">+0</span>
+        <div id="sg-unspent-text" class="sg-unspent-text"></div>
       </div>
     </header>
 
@@ -144,14 +151,7 @@
     <!-- Sentence Game — Endgame -->
     <div id="sentence-game" class="overlay hidden">
       <div class="sg-layout">
-        <!-- Skill bar top-right -->
         <div class="sg-skill-area">
-          <div class="sg-skill-bar-wrap" id="sg-skill-btn" title="Click to search & master words">
-            <div class="sg-skill-label">SKILL <span id="sg-skill-level">0</span></div>
-            <div class="sg-skill-bar"><div id="sg-skill-fill" class="sg-skill-fill"></div></div>
-            <span id="sg-skill-badge" class="sg-skill-badge hidden">+0</span>
-            <div id="sg-unspent-text" class="sg-unspent-text"></div>
-          </div>
           <button id="sg-mastered-btn" class="sg-mastered-btn">Mastered (<span id="sg-mastered-count">0</span>)</button>
         </div>
 

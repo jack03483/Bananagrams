@@ -102,6 +102,25 @@ async function loadDictionary() {
 // Sound — pronounce the word using Speech Synthesis
 // ============================================================
 
+function addSkillPoints(points) {
+  sgSkillPoints = parseInt(localStorage.getItem('sg-skillpoints') || '0') + points;
+  localStorage.setItem('sg-skillpoints', sgSkillPoints);
+
+  let totalEarned = parseInt(localStorage.getItem('sg-total-earned') || '0') + points;
+  localStorage.setItem('sg-total-earned', totalEarned);
+
+  const newLevel = Math.floor(totalEarned / 100) + 1;
+  if (newLevel > sgSkillLevel) {
+    sgSkillLevel = newLevel;
+    localStorage.setItem('sg-skilllevel', sgSkillLevel);
+    const wrap = document.getElementById('sg-skill-btn');
+    if (wrap) { wrap.classList.add('sg-skill-levelup'); setTimeout(() => wrap.classList.remove('sg-skill-levelup'), 1000); }
+    updatePlayerNameDisplay();
+  }
+
+  updateSkillDisplay();
+}
+
 function speakWord(word) {
   try {
     if (!window.speechSynthesis) return;
@@ -395,7 +414,12 @@ function validateBoard() {
   // Play sound when a new valid word appears on the board
   const currentValidWords = new Set(wordStatuses.filter(ws => ws.status === 'valid' || ws.status === 'mastered').map(ws => ws.word));
   for (const w of currentValidWords) {
-    if (!lastValidWords.has(w)) { playWordSound(w); break; }
+    if (!lastValidWords.has(w)) {
+      playWordSound(w);
+      // Add skill points for new valid word on board
+      addSkillPoints(w.length);
+      break;
+    }
   }
   lastValidWords = currentValidWords;
 
@@ -764,6 +788,7 @@ function bossSubmitWord() {
     bossUsedWords.push({ word, valid: true });
     showBossFeedback(`${word} — ${word.length} damage!`, true);
     playWordSound(word);
+    addSkillPoints(word.length);
   } else if (valid && canMake && word.length < bossMinWordLen) {
     playerBossHp = Math.max(0, playerBossHp - word.length);
     bossUsedWords.push({ word, valid: false });
@@ -826,64 +851,70 @@ document.getElementById('boss-submit-btn').addEventListener('click', bossSubmitW
 function bossVictory() {
   document.getElementById('boss-battle').classList.add('hidden');
 
-  if (bossLevel >= 5) {
-    // FINAL VICTORY — beat all 5 levels
-    showFinalVictory();
-    return;
-  }
-
-  // Level up — show victory then go back to board game
   const bv = document.getElementById('boss-victory');
   bv.classList.remove('hidden');
   fireConfetti(10000);
-  document.getElementById('boss-victory-msg').textContent =
-    bossLevel === 0 ? 'Boss defeated.' : `Level ${bossLevel} cleared.`;
-  document.getElementById('boss-next-action').textContent = 'Next Round';
 
-  function goNextRound() {
-    bv.classList.add('hidden');
-    pool = []; buildPool(); board = []; buildBoard();
-    rack = []; drawTiles(STARTING_TILES);
-    peelCooldown = false;
-    renderBoard(); renderRack(); updateCounts(); scheduleWordSuggestions();
-    document.removeEventListener('keydown', bossVictoryKey);
-  }
+  if (bossLevel >= 5) {
+    // At level 5+: go to sentence game
+    document.getElementById('boss-victory-msg').textContent = `Level ${bossLevel}. Speed round cleared.`;
+    document.getElementById('boss-next-action').textContent = 'Continue';
 
-  document.getElementById('boss-next-action').onclick = goNextRound;
-
-  function bossVictoryKey(e) {
-    if (e.key === 'Enter' && !bv.classList.contains('hidden')) {
-      e.preventDefault();
-      goNextRound();
+    function goSentence() {
+      bv.classList.add('hidden');
+      document.removeEventListener('keydown', bvKey);
+      // Show continue image then sentence game
+      document.getElementById('final-continue').classList.remove('hidden');
     }
+    document.getElementById('boss-next-action').onclick = goSentence;
+    function bvKey(e) { if (e.key === 'Enter' && !bv.classList.contains('hidden')) { e.preventDefault(); goSentence(); } }
+    document.addEventListener('keydown', bvKey);
+  } else {
+    // Below level 5: go back to board
+    document.getElementById('boss-victory-msg').textContent =
+      bossLevel === 0 ? 'Boss defeated.' : `Level ${bossLevel} cleared.`;
+    document.getElementById('boss-next-action').textContent = 'Next Round';
+
+    function goNextRound() {
+      bv.classList.add('hidden');
+      document.removeEventListener('keydown', bvKey2);
+      resetToBoard();
+    }
+    document.getElementById('boss-next-action').onclick = goNextRound;
+    function bvKey2(e) { if (e.key === 'Enter' && !bv.classList.contains('hidden')) { e.preventDefault(); goNextRound(); } }
+    document.addEventListener('keydown', bvKey2);
   }
-  document.addEventListener('keydown', bossVictoryKey);
 }
 
 function bossDefeat(reason) {
   document.getElementById('boss-battle').classList.add('hidden');
   document.getElementById('boss-defeat').classList.remove('hidden');
   document.getElementById('boss-defeat-msg').textContent = reason;
+  // Drop a level on defeat (minimum 0)
+  if (bossLevel > 0) bossLevel--;
+}
+
+function resetToBoard() {
+  pool = []; buildPool(); board = []; buildBoard();
+  rack = []; drawTiles(STARTING_TILES);
+  peelCooldown = false; lastValidWords = new Set();
+  updateLevelDisplay();
+  renderBoard(); renderRack(); updateCounts(); scheduleWordSuggestions();
+}
+
+function updateLevelDisplay() {
+  const el = document.getElementById('game-level-display');
+  if (bossLevel >= 0) {
+    el.textContent = `Level ${bossLevel + 1}`;
+    el.classList.remove('hidden');
+  } else {
+    el.classList.add('hidden');
+  }
 }
 
 // ============================================================
-// Final Victory — After Level 5
+// Final Continue → Sentence Game
 // ============================================================
-
-function showFinalVictory() {
-  fireConfetti(12000);
-  const fv = document.getElementById('final-victory');
-  fv.classList.remove('hidden');
-
-  // After 4 seconds, fade to Continue? image
-  setTimeout(() => {
-    fv.style.transition = 'opacity 2s ease'; fv.style.opacity = '0';
-    setTimeout(() => {
-      fv.classList.add('hidden'); fv.style.opacity = ''; fv.style.transition = '';
-      document.getElementById('final-continue').classList.remove('hidden');
-    }, 2000);
-  }, 4000);
-}
 
 // Click/key on final continue → Sentence Game
 document.getElementById('final-continue').addEventListener('click', () => {
@@ -902,6 +933,9 @@ let sgSkillPoints = 0;
 let sgSkillLevel = 0;
 let sgMasteredWords = JSON.parse(localStorage.getItem('sg-mastered') || '[]');
 let sgDictKeys = [];
+let sgWordsAttempted = 0;
+let sgWordsCorrect = 0;
+const SG_TOTAL_WORDS = 50;
 
 let sgCorrecting = false;
 let sgProcessing = false;
@@ -918,6 +952,9 @@ function startSentenceGame() {
   sgScore = 0;
   sgStreak = 0;
   sgCorrecting = false;
+  sgProcessing = false;
+  sgWordsAttempted = 0;
+  sgWordsCorrect = 0;
   sgSkillPoints = parseInt(localStorage.getItem('sg-skillpoints') || '0');
   const totalEarned = parseInt(localStorage.getItem('sg-total-earned') || '0');
   sgSkillLevel = Math.floor(totalEarned / 100) + 1;
@@ -1072,26 +1109,11 @@ document.getElementById('sg-form').addEventListener('submit', (e) => {
   if (answer === sgCurrentWord) {
     sgScore += sgCurrentWord.length;
     sgStreak++;
-    sgSkillPoints += sgCurrentWord.length;
-    localStorage.setItem('sg-skillpoints', sgSkillPoints);
+    addSkillPoints(sgCurrentWord.length);
 
-    // Track total earned for level calculation
-    let totalEarned = parseInt(localStorage.getItem('sg-total-earned') || '0');
-    totalEarned += sgCurrentWord.length;
-    localStorage.setItem('sg-total-earned', totalEarned);
-
-    const newLevel = Math.floor(totalEarned / 100) + 1;
-    if (newLevel > sgSkillLevel) {
-      sgSkillLevel = newLevel;
-      localStorage.setItem('sg-skilllevel', sgSkillLevel);
-      const wrap = document.getElementById('sg-skill-btn');
-      wrap.classList.add('sg-skill-levelup');
-      setTimeout(() => wrap.classList.remove('sg-skill-levelup'), 1000);
-      // Update name size
-      updatePlayerNameDisplay();
-    }
-
-    document.getElementById('sg-score').textContent = sgScore;
+    sgWordsAttempted++;
+    sgWordsCorrect++;
+    document.getElementById('sg-score').textContent = `${sgWordsAttempted} / ${SG_TOTAL_WORDS}`;
     updateSkillDisplay();
 
     document.getElementById('sg-input').disabled = true;
@@ -1099,9 +1121,14 @@ document.getElementById('sg-form').addEventListener('submit', (e) => {
     fb.textContent = `Correct!  +${sgCurrentWord.length} points`;
     fb.className = 'sg-feedback sg-correct';
 
-    setTimeout(() => nextSentence(), 1000);
+    if (sgWordsAttempted >= SG_TOTAL_WORDS) {
+      setTimeout(() => showSentenceResults(), 1000);
+    } else {
+      setTimeout(() => nextSentence(), 1000);
+    }
   } else {
     sgStreak = 0;
+    sgWordsAttempted++;
     fb.textContent = 'Incorrect.';
     fb.className = 'sg-feedback sg-incorrect';
     showCorrectionPanel();
@@ -1115,7 +1142,11 @@ document.getElementById('sg-correction-form').addEventListener('submit', (e) => 
   if (answer === sgCurrentWord) {
     document.getElementById('sg-correction-panel').classList.add('hidden');
     sgCorrecting = false;
-    setTimeout(() => nextSentence(), 300);
+    if (sgWordsAttempted >= SG_TOTAL_WORDS) {
+      setTimeout(() => showSentenceResults(), 300);
+    } else {
+      setTimeout(() => nextSentence(), 300);
+    }
   }
 });
 
@@ -1137,6 +1168,45 @@ document.getElementById('sg-skip-btn').addEventListener('click', () => {
   sgStreak = 0;
   showCorrectionPanel();
 });
+
+function showSentenceResults() {
+  const pct = Math.round((sgWordsCorrect / SG_TOTAL_WORDS) * 100);
+
+  document.getElementById('sg-sentence').innerHTML = '';
+  document.getElementById('sg-hint').innerHTML = '';
+  document.getElementById('sg-correction-panel').classList.add('hidden');
+  document.getElementById('sg-feedback').textContent = '';
+  document.getElementById('sg-input').disabled = true;
+
+  const main = document.getElementById('sg-streak');
+  main.innerHTML = `
+    <div style="font-size:3rem;font-weight:900;color:var(--accent);margin-bottom:0.5rem;">${pct}%</div>
+    <div style="font-size:1.2rem;color:var(--text);margin-bottom:0.5rem;">${sgWordsCorrect} out of ${SG_TOTAL_WORDS} correct</div>
+    <div style="font-size:0.9rem;color:var(--text-muted);margin-bottom:2rem;">Click or press Enter to continue</div>
+  `;
+
+  if (pct >= 60) fireConfetti(5000);
+
+  function returnToBoard() {
+    document.getElementById('sentence-game').style.transition = 'opacity 1.5s ease';
+    document.getElementById('sentence-game').style.opacity = '0';
+    setTimeout(() => {
+      document.getElementById('sentence-game').classList.add('hidden');
+      document.getElementById('sentence-game').style.opacity = '';
+      document.getElementById('sentence-game').style.transition = '';
+      resetToBoard();
+    }, 1500);
+    document.removeEventListener('keydown', resultKey);
+    document.getElementById('sentence-game').removeEventListener('click', returnToBoard);
+  }
+
+  function resultKey(e) {
+    if (e.key === 'Enter') { e.preventDefault(); returnToBoard(); }
+  }
+
+  document.addEventListener('keydown', resultKey);
+  document.getElementById('sentence-game').addEventListener('click', returnToBoard);
+}
 
 function updateSkillDisplay() {
   const totalEarned = parseInt(localStorage.getItem('sg-total-earned') || '0');
@@ -1855,5 +1925,10 @@ if (playerName) {
   document.getElementById('name-screen').classList.add('hidden');
   updatePlayerNameDisplay();
 }
+
+// Initialize skill display on load
+sgSkillPoints = parseInt(localStorage.getItem('sg-skillpoints') || '0');
+sgSkillLevel = Math.floor(parseInt(localStorage.getItem('sg-total-earned') || '0') / 100) + 1;
+updateSkillDisplay();
 
 init();
