@@ -1,2 +1,8 @@
 node_modules/
 *.db
+data/
+scripts/
+server.js
+package.json
+package-lock.json
+start.bat
