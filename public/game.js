@@ -1045,6 +1045,20 @@ document.getElementById('sg-search-close').addEventListener('click', () => {
   document.getElementById('sg-search-modal').classList.add('hidden');
 });
 
+// Enter in search = master the word if valid and has points
+document.getElementById('sg-search-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const word = document.getElementById('sg-search-input').value.trim().toUpperCase();
+    if (word && word in dictionary && sgSkillPoints > 0 && !sgMasteredWords.includes(word)) {
+      masterWord(word);
+      document.getElementById('sg-search-input').value = '';
+      // Re-show suggestions
+      refreshSearchSuggestions();
+    }
+  }
+});
+
 document.getElementById('sg-search-input').addEventListener('input', () => {
   const word = document.getElementById('sg-search-input').value.trim().toUpperCase();
   const resultEl = document.getElementById('sg-search-result');
@@ -1077,9 +1091,26 @@ function masterWord(word) {
   localStorage.setItem('sg-mastered', JSON.stringify(sgMasteredWords));
   updateSkillDisplay();
   document.getElementById('sg-mastered-count').textContent = sgMasteredWords.length;
+}
 
-  // Re-trigger search to update button
-  document.getElementById('sg-search-input').dispatchEvent(new Event('input'));
+function refreshSearchSuggestions() {
+  const masteredSet = new Set(sgMasteredWords);
+  const common = ['HELLO','WORLD','HOUSE','WATER','LIGHT','MUSIC','DREAM','HEART','SMILE',
+    'DANCE','LAUGH','SLEEP','BRAIN','TABLE','CHAIR','KNIFE','THROW','CATCH','CLIMB',
+    'SPEAK','WRITE','YOUNG','GREAT','SMALL','LARGE','THREE','UNDER','NEVER','AFTER',
+    'PLACE','EVERY','STILL','THINK','RIGHT','ABOUT','PLANT','RIVER','STONE','BREAD',
+    'QUIET','STORM','OCEAN','FLAME','FROST','BLOOM','BRAVE','SWIFT','GRACE','POWER',
+    'BEAST','CROWN','FORGE','QUEST','MAGIC','GHOST','SPELL','TRICK','VOICE','ARROW',
+    'BLADE','SHIELD','TOWER','WITCH','ROGUE','DWARF','GIANT','REALM','PEARL','CORAL'];
+  const suggestions = common.filter(w => w in dictionary && !masteredSet.has(w)).slice(0, 12);
+
+  let html = '<div class="sg-search-suggestions"><div class="sg-search-suggest-label">Suggested words to master:</div>';
+  html += '<div class="sg-search-suggest-grid">';
+  suggestions.forEach(w => {
+    html += `<button class="sg-suggest-chip" onclick="document.getElementById('sg-search-input').value='${w}';document.getElementById('sg-search-input').dispatchEvent(new Event('input'))">${w.toLowerCase()}</button>`;
+  });
+  html += '</div></div>';
+  document.getElementById('sg-search-result').innerHTML = html;
 }
 
 // Mastered review modal
