@@ -808,7 +808,18 @@ body {
   text-align: center;
 }
 
-#final-victory { background: rgba(0,0,0,0.9); }
+#final-victory {
+  background: #000;
+}
+
+#final-victory .victory-content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: none;
+  width: auto;
+}
 #final-continue { background: #000; cursor: pointer; animation: fadeInSlow 2s ease; }
 
 /* Sentence Game — Endgame */
