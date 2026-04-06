@@ -40,6 +40,57 @@ body {
 
 #top-bar h1 { font-size: 1.3rem; color: var(--accent); letter-spacing: 0.02em; }
 
+/* Name entry screen */
+.name-entry {
+  text-align: center;
+  padding: 3rem;
+}
+
+.name-entry-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #e9b44c;
+  margin-bottom: 1.5rem;
+}
+
+.name-entry-input {
+  display: block;
+  width: 260px;
+  margin: 0 auto 1rem;
+  padding: 0.8rem 1rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-align: center;
+  background: #252540;
+  color: #e8e8ee;
+  border: 2px solid #e9b44c;
+  border-radius: 12px;
+  outline: none;
+}
+
+.name-entry-input:focus {
+  border-color: #f1c40f;
+  box-shadow: 0 0 12px rgba(233, 180, 76, 0.3);
+}
+
+.name-entry-btn {
+  display: block;
+  width: 260px;
+  margin: 0 auto;
+  padding: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: #e9b44c;
+  color: #1a1a2e;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.name-entry-btn:hover {
+  background: #f1c40f;
+}
+
 .player-name-bar {
   font-weight: 900;
   color: var(--text);

@@ -1787,14 +1787,21 @@ function updatePlayerNameDisplay() {
   nameBar.style.fontSize = fontSize + 'rem';
 }
 
-document.getElementById('player-name-form').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const name = document.getElementById('player-name-input').value.trim();
+function submitPlayerName() {
+  var name = document.getElementById('player-name-input').value.trim();
   if (!name) return;
   playerName = name;
   localStorage.setItem('player-name', name);
   document.getElementById('name-screen').classList.add('hidden');
   updatePlayerNameDisplay();
+}
+
+document.getElementById('player-name-submit').addEventListener('click', submitPlayerName);
+document.getElementById('player-name-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    submitPlayerName();
+  }
 });
 
 // Check if we already have a name

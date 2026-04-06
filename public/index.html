@@ -20,12 +20,10 @@
 
     <!-- Name entry screen -->
     <div id="name-screen" class="overlay">
-      <div class="victory-content">
-        <h2 style="color:var(--accent);margin-bottom:1rem;">What's your name?</h2>
-        <form id="player-name-form" class="sg-form" style="justify-content:center;">
-          <input type="text" id="player-name-input" placeholder="Enter your name..." autocomplete="off" autofocus style="width:220px;">
-          <button type="submit">Play</button>
-        </form>
+      <div class="name-entry">
+        <div class="name-entry-title">What's your name?</div>
+        <input type="text" id="player-name-input" class="name-entry-input" placeholder="Enter your name..." autocomplete="off" autofocus>
+        <button type="button" id="player-name-submit" class="name-entry-btn">Play</button>
       </div>
     </div>
 
