@@ -802,14 +802,25 @@ function bossVictory() {
   document.getElementById('boss-victory-msg').textContent =
     bossLevel === 0 ? 'Boss defeated.' : `Level ${bossLevel} cleared.`;
   document.getElementById('boss-next-action').textContent = 'Next Round';
-  document.getElementById('boss-next-action').onclick = () => {
+
+  function goNextRound() {
     bv.classList.add('hidden');
-    // Reset board for next round
     pool = []; buildPool(); board = []; buildBoard();
     rack = []; drawTiles(STARTING_TILES);
     peelCooldown = false;
     renderBoard(); renderRack(); updateCounts(); scheduleWordSuggestions();
-  };
+    document.removeEventListener('keydown', bossVictoryKey);
+  }
+
+  document.getElementById('boss-next-action').onclick = goNextRound;
+
+  function bossVictoryKey(e) {
+    if (e.key === 'Enter' && !bv.classList.contains('hidden')) {
+      e.preventDefault();
+      goNextRound();
+    }
+  }
+  document.addEventListener('keydown', bossVictoryKey);
 }
 
 function bossDefeat(reason) {
