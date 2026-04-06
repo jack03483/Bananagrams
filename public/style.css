@@ -36,6 +36,8 @@ body {
   padding: 0.6rem 1.5rem;
   background: #141420;
   border-bottom: 1px solid #2a2a40;
+  position: relative;
+  z-index: 1100;
 }
 
 #top-bar h1 { font-size: 1.3rem; color: var(--accent); letter-spacing: 0.02em; }
