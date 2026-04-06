@@ -984,7 +984,7 @@ document.getElementById('sg-form').addEventListener('submit', (e) => {
   if (answer === sgCurrentWord) {
     sgScore += sgCurrentWord.length;
     sgStreak++;
-    sgSkillPoints++;
+    sgSkillPoints += sgCurrentWord.length;
     localStorage.setItem('sg-skillpoints', sgSkillPoints);
 
     const newLevel = Math.floor(sgSkillPoints / 3);
@@ -1043,7 +1043,7 @@ document.getElementById('sg-skip-btn').addEventListener('click', () => {
 
 function updateSkillDisplay() {
   document.getElementById('sg-skill-level').textContent = sgSkillLevel;
-  const progress = (sgSkillPoints % 3) / 3 * 100;
+  const progress = Math.min(100, sgSkillPoints);
   document.getElementById('sg-skill-fill').style.width = progress + '%';
 
   // Show green badge with unspent points
