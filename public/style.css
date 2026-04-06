@@ -167,6 +167,28 @@ body {
   border-color: #5dade2;
 }
 
+.cell.cursor-right::after {
+  content: '→';
+  position: absolute;
+  right: 1px;
+  bottom: 0;
+  font-size: 0.5rem;
+  color: #5dade2;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.cell.cursor-down::after {
+  content: '↓';
+  position: absolute;
+  right: 1px;
+  bottom: 0;
+  font-size: 0.5rem;
+  color: #5dade2;
+  line-height: 1;
+  pointer-events: none;
+}
+
 /* Rack */
 #rack-area {
   background: var(--rack-bg);

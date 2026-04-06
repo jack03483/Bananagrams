@@ -35,6 +35,7 @@ let peelCooldown = false;
 let cursorRow = Math.floor(BOARD_SIZE / 2);
 let cursorCol = Math.floor(BOARD_SIZE / 2);
 let boardFocused = false;
+let typingDir = 'right'; // 'right' or 'down'
 let bossLevel = -1; // -1 = not started, 0 = first encounter, 1-5 = levels
 
 // ============================================================
@@ -125,7 +126,10 @@ function renderBoard() {
         cell.textContent = board[r][c];
       }
 
-      if (boardFocused && r === cursorRow && c === cursorCol) cell.classList.add('cursor');
+      if (boardFocused && r === cursorRow && c === cursorCol) {
+        cell.classList.add('cursor');
+        cell.classList.add(typingDir === 'right' ? 'cursor-right' : 'cursor-down');
+      }
 
       cell.addEventListener('click', () => {
         cursorRow = r; cursorCol = c; boardFocused = true;
@@ -1101,6 +1105,22 @@ function renderWordSuggestions(results) {
 // Keyboard Navigation
 // ============================================================
 
+function advanceCursor() {
+  if (typingDir === 'right') {
+    if (cursorCol < BOARD_SIZE - 1) cursorCol++;
+  } else {
+    if (cursorRow < BOARD_SIZE - 1) cursorRow++;
+  }
+}
+
+function retreatCursor() {
+  if (typingDir === 'right') {
+    if (cursorCol > 0) cursorCol--;
+  } else {
+    if (cursorRow > 0) cursorRow--;
+  }
+}
+
 document.addEventListener('keydown', (e) => {
   if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
   // Block if any overlay is open
@@ -1122,6 +1142,14 @@ document.addEventListener('keydown', (e) => {
 
   const key = e.key;
 
+  // Tab — toggle typing direction
+  if (key === 'Tab' && boardFocused) {
+    e.preventDefault();
+    typingDir = typingDir === 'right' ? 'down' : 'right';
+    renderBoard();
+    return;
+  }
+
   if (key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight') {
     e.preventDefault(); boardFocused = true;
     if (key === 'ArrowUp') cursorRow = Math.max(0, cursorRow - 1);
@@ -1142,12 +1170,12 @@ document.addEventListener('keydown', (e) => {
 
     if (board[cursorRow][cursorCol] === null) {
       board[cursorRow][cursorCol] = letter; rack.splice(rackIdx, 1);
-      if (cursorCol < BOARD_SIZE - 1) cursorCol++;
+      advanceCursor();
       selectedTile = null; renderBoard(); renderRack(); scheduleWordSuggestions();
     } else if (board[cursorRow][cursorCol] !== letter) {
       const existing = board[cursorRow][cursorCol];
       board[cursorRow][cursorCol] = letter; rack.splice(rackIdx, 1); rack.push(existing);
-      if (cursorCol < BOARD_SIZE - 1) cursorCol++;
+      advanceCursor();
       selectedTile = null; renderBoard(); renderRack(); scheduleWordSuggestions();
     }
     return;
@@ -1157,10 +1185,10 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     if (board[cursorRow][cursorCol]) {
       rack.push(board[cursorRow][cursorCol]); board[cursorRow][cursorCol] = null;
-      if (key === 'Backspace' && cursorCol > 0) cursorCol--;
+      if (key === 'Backspace') retreatCursor();
       selectedTile = null; renderBoard(); renderRack(); scheduleWordSuggestions();
-    } else if (key === 'Backspace' && cursorCol > 0) {
-      cursorCol--;
+    } else if (key === 'Backspace') {
+      retreatCursor();
       if (board[cursorRow][cursorCol]) {
         rack.push(board[cursorRow][cursorCol]); board[cursorRow][cursorCol] = null;
         selectedTile = null; renderBoard(); renderRack(); scheduleWordSuggestions();
