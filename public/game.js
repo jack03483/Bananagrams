@@ -1137,7 +1137,7 @@ function updateWordSuggestions() {
     if (word.length < 2 || word.length > allLetters.length) continue;
     if (canMakeWord(word, available)) results.push({ word, definition: dictionary[word], length: word.length });
   }
-  results.sort((a, b) => a.length - b.length || a.word.localeCompare(b.word));
+  results.sort((a, b) => b.length - a.length || a.word.localeCompare(b.word));
   renderWordSuggestions(results);
 }
 
@@ -1154,7 +1154,7 @@ function renderWordSuggestions(results) {
   for (const r of results) { if (!groups[r.length]) groups[r.length] = []; groups[r.length].push(r); }
 
   let html = '';
-  for (const len of Object.keys(groups).sort((a, b) => a - b)) {
+  for (const len of Object.keys(groups).sort((a, b) => b - a)) {
     const group = groups[len];
     html += `<div class="word-group-header">${len}-letter words (${group.length})</div>`;
     for (const item of group) {
