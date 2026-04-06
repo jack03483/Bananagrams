@@ -232,8 +232,8 @@ body {
   border-color: #5dade2;
 }
 
-.cell.cursor-right::after {
-  content: '→';
+.cell.cursor-right::after, .cell.cursor-down::after,
+.cell.cursor-left::after, .cell.cursor-up::after {
   position: absolute;
   right: 1px;
   bottom: 0;
@@ -243,16 +243,10 @@ body {
   pointer-events: none;
 }
 
-.cell.cursor-down::after {
-  content: '↓';
-  position: absolute;
-  right: 1px;
-  bottom: 0;
-  font-size: 0.5rem;
-  color: #5dade2;
-  line-height: 1;
-  pointer-events: none;
-}
+.cell.cursor-right::after { content: '→'; }
+.cell.cursor-down::after { content: '↓'; }
+.cell.cursor-left::after { content: '←'; }
+.cell.cursor-up::after { content: '↑'; }
 
 /* Rack */
 #rack-area {

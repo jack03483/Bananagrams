@@ -36,7 +36,7 @@ let lastValidWords = new Set();
 let cursorRow = Math.floor(BOARD_SIZE / 2);
 let cursorCol = Math.floor(BOARD_SIZE / 2);
 let boardFocused = false;
-let typingDir = 'right'; // 'right' or 'down'
+let typingDir = 'right'; // 'right', 'down', 'left', 'up'
 let bossLevel = -1; // -1 = not started, 0 = first encounter, 1-5 = levels
 let playerName = localStorage.getItem('player-name') || '';
 
@@ -99,51 +99,23 @@ async function loadDictionary() {
 }
 
 // ============================================================
-// Sound Effects (Web Audio API — no files needed)
+// Sound — pronounce the word using Speech Synthesis
 // ============================================================
 
-let audioCtx = null;
-function getAudioCtx() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  return audioCtx;
-}
-
-function playWordSound() {
+function speakWord(word) {
   try {
-    const ctx = getAudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(523, ctx.currentTime);       // C5
-    osc.frequency.setValueAtTime(659, ctx.currentTime + 0.08); // E5
-    osc.frequency.setValueAtTime(784, ctx.currentTime + 0.16); // G5
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.35);
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(word.toLowerCase());
+    utter.rate = 0.9;
+    utter.pitch = 1;
+    utter.volume = 0.8;
+    window.speechSynthesis.speak(utter);
   } catch (e) {}
 }
 
-function playCorrectSound() {
-  try {
-    const ctx = getAudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(440, ctx.currentTime);
-    osc.frequency.setValueAtTime(554, ctx.currentTime + 0.1);
-    osc.frequency.setValueAtTime(659, ctx.currentTime + 0.2);
-    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.3);
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.5);
-  } catch (e) {}
-}
+function playWordSound(word) { speakWord(word || ''); }
+function playCorrectSound(word) { speakWord(word || ''); }
 
 function isValidWord(word) {
   if (!dictionary) return false;
@@ -182,7 +154,7 @@ function renderBoard() {
 
       if (boardFocused && r === cursorRow && c === cursorCol) {
         cell.classList.add('cursor');
-        cell.classList.add(typingDir === 'right' ? 'cursor-right' : 'cursor-down');
+        cell.classList.add('cursor-' + typingDir);
       }
 
       cell.addEventListener('click', () => {
@@ -423,7 +395,7 @@ function validateBoard() {
   // Play sound when a new valid word appears on the board
   const currentValidWords = new Set(wordStatuses.filter(ws => ws.status === 'valid' || ws.status === 'mastered').map(ws => ws.word));
   for (const w of currentValidWords) {
-    if (!lastValidWords.has(w)) { playWordSound(); break; }
+    if (!lastValidWords.has(w)) { playWordSound(w); break; }
   }
   lastValidWords = currentValidWords;
 
@@ -791,7 +763,7 @@ function bossSubmitWord() {
     bossHp = Math.max(0, bossHp - word.length);
     bossUsedWords.push({ word, valid: true });
     showBossFeedback(`${word} — ${word.length} damage!`, true);
-    playWordSound();
+    playWordSound(word);
   } else if (valid && canMake && word.length < bossMinWordLen) {
     playerBossHp = Math.max(0, playerBossHp - word.length);
     bossUsedWords.push({ word, valid: false });
@@ -1123,7 +1095,7 @@ document.getElementById('sg-form').addEventListener('submit', (e) => {
     updateSkillDisplay();
 
     document.getElementById('sg-input').disabled = true;
-    playCorrectSound();
+    playCorrectSound(sgCurrentWord);
     fb.textContent = `Correct!  +${sgCurrentWord.length} points`;
     fb.className = 'sg-feedback sg-correct';
 
@@ -1738,19 +1710,17 @@ function renderWordSuggestions(results) {
 // ============================================================
 
 function advanceCursor() {
-  if (typingDir === 'right') {
-    if (cursorCol < BOARD_SIZE - 1) cursorCol++;
-  } else {
-    if (cursorRow < BOARD_SIZE - 1) cursorRow++;
-  }
+  if (typingDir === 'right' && cursorCol < BOARD_SIZE - 1) cursorCol++;
+  else if (typingDir === 'left' && cursorCol > 0) cursorCol--;
+  else if (typingDir === 'down' && cursorRow < BOARD_SIZE - 1) cursorRow++;
+  else if (typingDir === 'up' && cursorRow > 0) cursorRow--;
 }
 
 function retreatCursor() {
-  if (typingDir === 'right') {
-    if (cursorCol > 0) cursorCol--;
-  } else {
-    if (cursorRow > 0) cursorRow--;
-  }
+  if (typingDir === 'right' && cursorCol > 0) cursorCol--;
+  else if (typingDir === 'left' && cursorCol < BOARD_SIZE - 1) cursorCol++;
+  else if (typingDir === 'down' && cursorRow > 0) cursorRow--;
+  else if (typingDir === 'up' && cursorRow < BOARD_SIZE - 1) cursorRow++;
 }
 
 document.addEventListener('keydown', (e) => {
@@ -1773,10 +1743,17 @@ document.addEventListener('keydown', (e) => {
 
   const key = e.key;
 
-  // Tab — toggle typing direction
+  // Tab — rotate direction clockwise: right→down→left→up
+  // Shift+Tab — reverse direction 180°
   if (key === 'Tab' && boardFocused) {
     e.preventDefault();
-    typingDir = typingDir === 'right' ? 'down' : 'right';
+    if (e.shiftKey) {
+      const reverse = { right: 'left', left: 'right', down: 'up', up: 'down' };
+      typingDir = reverse[typingDir];
+    } else {
+      const next = { right: 'down', down: 'left', left: 'up', up: 'right' };
+      typingDir = next[typingDir];
+    }
     renderBoard();
     return;
   }
