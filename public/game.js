@@ -1886,6 +1886,19 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
+// DEV buttons (remove before final push)
+// ============================================================
+document.getElementById('dev-skip-btn').addEventListener('click', () => showVictoryScreen());
+document.getElementById('dev-skip-final').addEventListener('click', () => {
+  bossLevel = 5;
+  document.getElementById('final-continue').classList.remove('hidden');
+});
+document.getElementById('dev-skip-sentence').addEventListener('click', () => {
+  bossLevel = 5;
+  startSentenceGame();
+});
+
+// ============================================================
 // Start
 // ============================================================
 
