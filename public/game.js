@@ -102,6 +102,11 @@ function isValidWord(word) {
   return word.toUpperCase() in dictionary;
 }
 
+function isMasteredWord(word) {
+  const mastered = JSON.parse(localStorage.getItem('sg-mastered') || '[]');
+  return mastered.includes(word.toUpperCase());
+}
+
 function getDefinition(word) {
   if (!dictionary) return '';
   return dictionary[word.toUpperCase()] || '';
@@ -669,11 +674,13 @@ function updateBossWordSuggestions() {
   bossLetters.forEach(l => { available[l] = (available[l] || 0) + 1; });
 
   const usedSet = new Set(bossUsedWords.filter(w => w.valid).map(w => w.word));
+  const masteredSet = new Set(JSON.parse(localStorage.getItem('sg-mastered') || '[]'));
   const results = [];
 
   for (const word of Object.keys(dictionary)) {
     if (word.length < bossMinWordLen || word.length > bossLetters.length) continue;
     if (usedSet.has(word)) continue;
+    if (masteredSet.has(word)) continue;
     if (canMakeFromBossLetters2(word, available)) results.push(word);
     if (results.length >= 200) break;
   }
@@ -709,6 +716,7 @@ function bossSubmitWord() {
   if (!word) return;
 
   if (bossUsedWords.some(w => w.word === word)) { showBossFeedback('Already used!', false); return; }
+  if (isMasteredWord(word)) { showBossFeedback(`${word} is mastered — can't use it here!`, false); return; }
 
   const valid = isValidWord(word);
   const canMake = canMakeFromBossLetters(word);
