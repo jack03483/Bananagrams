@@ -877,7 +877,56 @@ body {
   transition: width 0.5s ease;
 }
 
-.sg-skill-points { font-size: 0.65rem; color: var(--text-muted); margin-top: 0.15rem; }
+.sg-skill-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  background: #27ae60;
+  color: white;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  animation: badgePop 0.3s ease;
+}
+
+.sg-skill-badge.hidden { display: none; }
+
+@keyframes badgePop {
+  0% { transform: scale(0.5); }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.sg-search-suggestions { margin-bottom: 1rem; }
+
+.sg-search-suggest-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.sg-search-suggest-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.sg-suggest-chip {
+  padding: 0.3rem 0.6rem;
+  background: rgba(233,180,76,0.1);
+  color: var(--accent);
+  border: 1px solid rgba(233,180,76,0.25);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: lowercase;
+}
+
+.sg-suggest-chip:hover {
+  background: rgba(233,180,76,0.25);
+  border-color: var(--accent);
+}
 
 .sg-mastered-btn {
   padding: 0.35rem 0.75rem;

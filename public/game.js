@@ -1027,7 +1027,12 @@ document.getElementById('sg-form').addEventListener('submit', (e) => {
   if (sgCorrecting) return;
   const input = document.getElementById('sg-input');
   const answer = input.value.trim().toUpperCase();
-  if (!answer) return;
+
+  // Empty submit = reveal a hint
+  if (!answer) {
+    if (sgHintsUsed < 4) { sgHintsUsed++; updateHintDisplay(); }
+    return;
+  }
 
   const fb = document.getElementById('sg-feedback');
 
@@ -1037,7 +1042,7 @@ document.getElementById('sg-form').addEventListener('submit', (e) => {
     sgSkillPoints++;
     localStorage.setItem('sg-skillpoints', sgSkillPoints);
 
-    const newLevel = Math.floor(sgSkillPoints / 10);
+    const newLevel = Math.floor(sgSkillPoints / 3);
     if (newLevel > sgSkillLevel) {
       sgSkillLevel = newLevel;
       localStorage.setItem('sg-skilllevel', sgSkillLevel);
@@ -1093,17 +1098,42 @@ document.getElementById('sg-skip-btn').addEventListener('click', () => {
 
 function updateSkillDisplay() {
   document.getElementById('sg-skill-level').textContent = sgSkillLevel;
-  document.getElementById('sg-skill-points').textContent = sgSkillPoints;
-  const progress = (sgSkillPoints % 10) / 10 * 100;
+  const progress = (sgSkillPoints % 3) / 3 * 100;
   document.getElementById('sg-skill-fill').style.width = progress + '%';
+
+  // Show green badge with unspent points
+  const badge = document.getElementById('sg-skill-badge');
+  if (sgSkillPoints > 0) {
+    badge.textContent = '+' + sgSkillPoints;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
 }
 
 // Skill search modal
 document.getElementById('sg-skill-btn').addEventListener('click', () => {
   document.getElementById('sg-search-modal').classList.remove('hidden');
   document.getElementById('sg-search-input').value = '';
-  document.getElementById('sg-search-result').innerHTML = '';
   document.getElementById('sg-search-input').focus();
+
+  // Show suggested common words to master
+  const masteredSet = new Set(sgMasteredWords);
+  const common = ['HELLO','WORLD','HOUSE','WATER','LIGHT','MUSIC','DREAM','HEART','SMILE',
+    'DANCE','LAUGH','SLEEP','BRAIN','TABLE','CHAIR','KNIFE','THROW','CATCH','CLIMB',
+    'SPEAK','WRITE','YOUNG','GREAT','SMALL','LARGE','THREE','UNDER','NEVER','AFTER',
+    'PLACE','EVERY','STILL','THINK','RIGHT','ABOUT','PEOPLE','COULD','WOULD','THEIR',
+    'WHICH','THERE','PLANT','RIVER','STONE','BREAD','QUIET','STORM','OCEAN','FLAME',
+    'FROST','BLOOM','BRAVE','SWIFT','GRACE','POWER','BEAST','CROWN','FORGE','QUEST'];
+  const suggestions = common.filter(w => w in dictionary && !masteredSet.has(w)).slice(0, 12);
+
+  let html = '<div class="sg-search-suggestions"><div class="sg-search-suggest-label">Suggested words to master:</div>';
+  html += '<div class="sg-search-suggest-grid">';
+  suggestions.forEach(w => {
+    html += `<button class="sg-suggest-chip" onclick="document.getElementById('sg-search-input').value='${w}';document.getElementById('sg-search-input').dispatchEvent(new Event('input'))">${w.toLowerCase()}</button>`;
+  });
+  html += '</div></div>';
+  document.getElementById('sg-search-result').innerHTML = html;
 });
 
 document.getElementById('sg-search-close').addEventListener('click', () => {
