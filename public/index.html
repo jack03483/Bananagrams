@@ -184,37 +184,38 @@
         </div>
       </div>
 
-      <!-- Skill Search Modal -->
-      <div id="sg-search-modal" class="sg-modal hidden">
-        <div class="sg-modal-content">
-          <div class="sg-modal-header">
-            <h3>Search & Master Words</h3>
-            <button id="sg-search-close" class="sg-modal-close">&times;</button>
-          </div>
-          <div class="sg-search-area">
-            <input type="text" id="sg-search-input" placeholder="Type any word..."
-                   autocomplete="off" autocapitalize="off" spellcheck="false">
-            <div id="sg-search-result" class="sg-search-result"></div>
-          </div>
+    </div>
+
+    <!-- Skill Search Modal (global — works from any screen) -->
+    <div id="sg-search-modal" class="sg-modal hidden">
+      <div class="sg-modal-content">
+        <div class="sg-modal-header">
+          <h3>Search & Master Words</h3>
+          <button id="sg-search-close" class="sg-modal-close">&times;</button>
+        </div>
+        <div class="sg-search-area">
+          <input type="text" id="sg-search-input" placeholder="Type any word..."
+                 autocomplete="off" autocapitalize="off" spellcheck="false">
+          <div id="sg-search-result" class="sg-search-result"></div>
         </div>
       </div>
+    </div>
 
-      <!-- Mastered Review Modal -->
-      <div id="sg-mastered-modal" class="sg-modal hidden">
-        <div class="sg-modal-content">
-          <div class="sg-modal-header">
-            <h3>Mastered Words</h3>
-            <button id="sg-mastered-close" class="sg-modal-close">&times;</button>
-          </div>
-          <div id="sg-mastered-card" class="sg-mastered-card"></div>
-          <form id="sg-mastered-form" class="sg-form">
-            <input type="text" id="sg-mastered-input" placeholder="Type the word..."
-                   autocomplete="off" autocapitalize="off" spellcheck="false">
-            <button type="submit">Check</button>
-            <button type="button" id="sg-mastered-next">Skip</button>
-          </form>
-          <div id="sg-mastered-feedback" class="sg-feedback"></div>
+    <!-- Mastered Review Modal (global) -->
+    <div id="sg-mastered-modal" class="sg-modal hidden">
+      <div class="sg-modal-content">
+        <div class="sg-modal-header">
+          <h3>Mastered Words</h3>
+          <button id="sg-mastered-close" class="sg-modal-close">&times;</button>
         </div>
+        <div id="sg-mastered-card" class="sg-mastered-card"></div>
+        <form id="sg-mastered-form" class="sg-form">
+          <input type="text" id="sg-mastered-input" placeholder="Type the word..."
+                 autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button type="submit">Check</button>
+          <button type="button" id="sg-mastered-next">Skip</button>
+        </form>
+        <div id="sg-mastered-feedback" class="sg-feedback"></div>
       </div>
     </div>
   </div>
